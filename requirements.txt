@@ -1,0 +1,34 @@
+# conda update -n base -c defaults conda
+# CUDA 11.3
+#conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch
+# CUDA 11.6
+#conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.6 -c pytorch -c conda-forge
+#conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.6 -c pytorch -c nvidia
+# CUDA 11.7
+#conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 pytorch-cuda=11.7 -c pytorch -c nvidia
+
+## conda install cython
+## conda install ninja
+## conda install cudatoolkit-dev -c conda-forge
+#pip install python-dev-tools --user --upgrade
+## numpy 1.23.5 olacak ONEMLI!!!!!!!!!!!!!!!!! pip install numpy==1.23.5
+opencv-python
+Cython
+numba
+progress
+matplotlib
+easydict
+scipy
+pyyaml
+yacs
+PyYAML
+cython-bbox
+motmetrics
+#lap==0.4.0
+openpyxl
+Pillow
+tensorboardX
+fvcore
+pycocotools
+pyquaternion
+pyrsistent
