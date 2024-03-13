@@ -23,10 +23,10 @@ set_batch_size() {
   local gpu_model="$1"
   case "$gpu_model" in
     "RTX3090")
-      batch_size=8
+      batch_size=16
       ;;
     "RTX4090")
-      batch_size=8
+      batch_size=12
       ;;
     "GTX1080Ti")
       batch_size=8
