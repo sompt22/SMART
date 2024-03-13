@@ -4,8 +4,8 @@ from numba import jit
 import copy
 import os
 import pathlib
-
 from tracker_fair import matching
+
 class Tracker(object):
   def __init__(self, opt):
     self.opt = opt
@@ -108,7 +108,7 @@ class Tracker(object):
         self.tracking_embedding_matrix.write("Unmatched Detections: " + str(unmatched_dets) + "\n")
         self.tracking_embedding_matrix.write("Unmatched Tracks: " + str(unmatched_tracks) + "\n")
         path = os.path.join(pathlib.Path().resolve(), "..", "exp", self.opt.task, self.opt.exp_id, "debug")  
-        matching.plot_cost_matrices(cos_sim_inv, adjusted_cos_sim, matched_indices ,path +f'/{self.frm_count}cosine_similarity_matrices.png')        
+        #matching.plot_cost_matrices(cos_sim_inv, adjusted_cos_sim, matched_indices ,path +f'/{self.frm_count}cosine_similarity_matrices.png')        
 
       # Step 4: Apply Greedy Matching for Unmatched Detections and Tracks
       # Only consider unmatched detections and tracks for greedy matching
@@ -126,22 +126,23 @@ class Tracker(object):
                     
     elif 'tracking' in self.opt.heads:
       print("tracking")
-	if self.opt.hungarian:
-	  item_score = np.array([item['score'] for item in results], np.float32) # N
-	  lse_dist[lse_dist > 1e18] = 1e18
-	  matched_indices = linear_assignment_sk(lse_dist)
-	  matches = []
-	  for m in matched_indices:
-	    if dist[m[0], m[1]] > 1e16:
-	      unmatched_dets.append(m[0])
-	      unmatched_tracks.append(m[1])
-	    else:
-	      matches.append(m)
-	  matches = np.array(matches).reshape(-1, 2)	  	  
-	else:
-	  matched_indices = greedy_assignment(copy.deepcopy(lse_dist))
-	  unmatched_dets = [d for d in range(dets.shape[0]) if not (d in matched_indices[:, 0])]
-	  unmatched_tracks = [d for d in range(tracks.shape[0]) if not (d in matched_indices[:, 1])]
+      if self.opt.hungarian:
+        item_score = np.array([item['score'] for item in results], np.float32) # N
+        lse_dist[lse_dist > 1e18] = 1e18
+        matched_indices = linear_assignment_sk(lse_dist)
+        matches = []
+        for m in matched_indices:
+          if dist[m[0], m[1]] > 1e16:
+            unmatched_dets.append(m[0])
+            unmatched_tracks.append(m[1])
+          else:
+            matches.append(m)
+        matches = np.array(matches).reshape(-1, 2)	  
+        matched_indices = matches	  
+      else:
+        matched_indices = matching.greedy_assignment(copy.deepcopy(lse_dist))
+        unmatched_dets = [d for d in range(dets.shape[0]) if not (d in matched_indices[:, 0])]
+        unmatched_tracks = [d for d in range(tracks.shape[0]) if not (d in matched_indices[:, 1])]
 
       if self.opt.debug == 4:        
         self.tracking_matrix.write("Frame: " + str(self.frm_count) + "\n")
