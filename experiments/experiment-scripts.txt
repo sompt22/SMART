@@ -1,0 +1,146 @@
+==================================================================================== inference: ctdet =============================================================================
+
+==================================================================================== training task: ctdet =========================================================================
+
+bash experiments/inference.sh exp/ctdet/sompt22_RTX3090_epochs_30_lrstep_25_lr_2.5e-6/logs_2024-03-11-11-47/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3															2 people	crowdhuman.pth
+
+bash experiments/inference.sh exp/ctdet/sompt22_RTX3090_epochs_30_lrstep_25_lr_2.5e-6/logs_2024-03-11-11-47/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_4_25_20_linear_constant_0_none_0/sompt22_train_4_25_20_linear_constant_0_none_0.mp4 ctdet 3															4 people	crowdhuman.pth
+
+bash experiments/inference.sh exp/ctdet/sompt22_RTX3090_epochs_30_lrstep_25_lr_2.5e-6/logs_2024-03-11-11-47/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_linear_constant_0_none_0/sompt22_train_6_25_20_linear_constant_0_none_0.mp4 ctdet 3															6 people	crowdhuman.pth
+
+bash experiments/inference.sh exp/ctdet/sompt22_RTX3090_epochs_30_lrstep_25_lr_2.5e-6/logs_2024-03-11-11-47/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4.mp4 ctdet 3			6 people	crowdhuman.pth
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+bash experiments/inference.sh exp/ctdet/sompt22_RTX3090_epochs_30_lrstep_25_lr_2.5e-6/logs_2024-03-13-20-45/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3															2 people	divo model_last.pth
+
+bash experiments/inference.sh exp/ctdet/sompt22_RTX3090_epochs_30_lrstep_25_lr_2.5e-6/logs_2024-03-13-20-45/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_4_25_20_linear_constant_0_none_0/sompt22_train_4_25_20_linear_constant_0_none_0.mp4 ctdet 3															4 people	divo model_last.pth
+
+bash experiments/inference.sh exp/ctdet/sompt22_RTX3090_epochs_30_lrstep_25_lr_2.5e-6/logs_2024-03-13-20-45/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_linear_constant_0_none_0/sompt22_train_6_25_20_linear_constant_0_none_0.mp4 ctdet 3															6 people	divo model_last.pth
+
+bash experiments/inference.sh exp/ctdet/sompt22_RTX3090_epochs_30_lrstep_25_lr_2.5e-6/logs_2024-03-13-20-45/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4.mp4 ctdet 3			6 people	divo model_last.pth
+
+==================================================================================== training task: tracking ======================================================================
+
+bash experiments/inference.sh models/crowdhuman.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3 	
+																								2 people	random initialized
+
+bash experiments/inference.sh models/crowdhuman.pth data/sompt22-train-sim/images/test/sompt22_train_4_25_20_linear_constant_0_none_0/sompt22_train_4_25_20_linear_constant_0_none_0.mp4 ctdet 3	
+																								4 people	random initialized
+
+bash experiments/inference.sh models/crowdhuman.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_linear_constant_0_none_0/sompt22_train_6_25_20_linear_constant_0_none_0.mp4 ctdet 3	
+																								6 people	random initialized
+																								
+bash experiments/inference.sh models/crowdhuman.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4.mp4 ctdet 3													6 people	random initialized																							
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+bash experiments/inference.sh models/crowdhuman_divo_trained.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3 							   																	2 people	crowdhuman.pth
+
+bash experiments/inference.sh models/crowdhuman_divo_trained.pth data/sompt22-train-sim/images/test/sompt22_train_4_25_20_linear_constant_0_none_0/sompt22_train_4_25_20_linear_constant_0_none_0.mp4 ctdet 3																				 			  	4 people	crowdhuman.pth
+
+bash experiments/inference.sh models/crowdhuman_divo_trained.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_linear_constant_0_none_0/sompt22_train_6_25_20_linear_constant_0_none_0.mp4 ctdet 3	   				 																			6 people	crowdhuman.pth
+
+bash experiments/inference.sh models/crowdhuman_divo_trained.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4.mp4 ctdet 3													6 people
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+bash experiments/inference.sh models/mot17_fulltrain.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3  
+																								2 people	crowdhuman.pth
+
+bash experiments/inference.sh models/mot17_fulltrain.pth data/sompt22-train-sim/images/test/sompt22_train_4_25_20_linear_constant_0_none_0/sompt22_train_4_25_20_linear_constant_0_none_0.mp4 ctdet 3	 
+																								4 people	crowdhuman.pth
+
+bash experiments/inference.sh models/mot17_fulltrain.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_linear_constant_0_none_0/sompt22_train_6_25_20_linear_constant_0_none_0.mp4 ctdet 3	 
+																								6 people	crowdhuman.pth
+
+bash experiments/inference.sh models/mot17_fulltrain.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4.mp4 ctdet 3													6 people
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking/divo_RTX4090_epochs_40_lrstep_35_lr_2.5e-5/logs_2024-02-01-19-40/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3							2 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking/divo_RTX4090_epochs_40_lrstep_35_lr_2.5e-5/logs_2024-02-01-19-40/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_4_25_20_linear_constant_0_none_0/sompt22_train_4_25_20_linear_constant_0_none_0.mp4 ctdet 3							4 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking/divo_RTX4090_epochs_40_lrstep_35_lr_2.5e-5/logs_2024-02-01-19-40/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_linear_constant_0_none_0/sompt22_train_6_25_20_linear_constant_0_none_0.mp4 ctdet 3							6 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking/divo_RTX4090_epochs_40_lrstep_35_lr_2.5e-5/logs_2024-02-01-19-40/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4.mp4 ctdet 3			6 people											6 people 
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking/divo_RTX3090_epochs_30_lrstep_25_lr_5e-4/logs_2024-01-27-17-07/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3							2 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking/divo_RTX3090_epochs_30_lrstep_25_lr_5e-4/logs_2024-01-27-17-07/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_4_25_20_linear_constant_0_none_0/sompt22_train_4_25_20_linear_constant_0_none_0.mp4 ctdet 3							4 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking/divo_RTX3090_epochs_30_lrstep_25_lr_5e-4/logs_2024-01-27-17-07/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_linear_constant_0_none_0/sompt22_train_6_25_20_linear_constant_0_none_0.mp4 ctdet 3							6 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking/divo_RTX3090_epochs_30_lrstep_25_lr_5e-4/logs_2024-01-27-17-07/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4.mp4 ctdet 3			6 people
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+bash experiments/inference.sh /home/fatih/phd/SMART/exp/tracking/sompt22_RTX4090_epochs_30_lrstep_25_lr_2.5e-6_bs_12_task_tracking_kd_0/logs_2024-03-11-11-42/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3							2 people	divo model_last.pth
+
+bash experiments/inference.sh /home/fatih/phd/SMART/exp/tracking/sompt22_RTX4090_epochs_30_lrstep_25_lr_2.5e-6_bs_12_task_tracking_kd_0/logs_2024-03-11-11-42/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_4_25_20_linear_constant_0_none_0/sompt22_train_4_25_20_linear_constant_0_none_0.mp4 ctdet 3							4 people	divo model_last.pth
+
+bash experiments/inference.sh /home/fatih/phd/SMART/exp/tracking/sompt22_RTX4090_epochs_30_lrstep_25_lr_2.5e-6_bs_12_task_tracking_kd_0/logs_2024-03-11-11-42/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_linear_constant_0_none_0/sompt22_train_6_25_20_linear_constant_0_none_0.mp4 ctdet 3							6 people	divo model_last.pth
+
+bash experiments/inference.sh /home/fatih/phd/SMART/exp/tracking/sompt22_RTX4090_epochs_30_lrstep_25_lr_2.5e-6_bs_12_task_tracking_kd_0/logs_2024-03-11-11-42/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4.mp4 ctdet 3			6 people
+
+
+==================================================================================== training task: embedding =========================================================================
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/embedding/divo_RTX4090_epochs_40_lrstep_35_lr_2.5e-5/logs_2024-02-04-00-41/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3							2 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/embedding/divo_RTX4090_epochs_40_lrstep_35_lr_2.5e-5/logs_2024-02-04-00-41/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_4_25_20_linear_constant_0_none_0/sompt22_train_4_25_20_linear_constant_0_none_0.mp4 ctdet 3							4 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/embedding/divo_RTX4090_epochs_40_lrstep_35_lr_2.5e-5/logs_2024-02-04-00-41/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_linear_constant_0_none_0/sompt22_train_6_25_20_linear_constant_0_none_0.mp4 ctdet 3							6 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/embedding/divo_RTX4090_epochs_40_lrstep_35_lr_2.5e-5/logs_2024-02-04-00-41/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4.mp4 ctdet 3			6 people
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/embedding/divo_RTX4090_epochs_20_lrstep_15_lr_2.5e-6/logs_2024-02-03-10-26/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3							2 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/embedding/divo_RTX4090_epochs_20_lrstep_15_lr_2.5e-6/logs_2024-02-03-10-26/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_4_25_20_linear_constant_0_none_0/sompt22_train_4_25_20_linear_constant_0_none_0.mp4 ctdet 3							4 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/embedding/divo_RTX4090_epochs_20_lrstep_15_lr_2.5e-6/logs_2024-02-03-10-26/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_linear_constant_0_none_0/sompt22_train_6_25_20_linear_constant_0_none_0.mp4 ctdet 3							6 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/embedding/divo_RTX4090_epochs_20_lrstep_15_lr_2.5e-6/logs_2024-02-03-10-26/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4.mp4 ctdet 3			6 people
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/embedding/sompt22_RTX4090_epochs_100_lrstep_90_lr_2.5e-6/logs_2024-02-06-16-13/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3							2 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/embedding/sompt22_RTX4090_epochs_100_lrstep_90_lr_2.5e-6/logs_2024-02-06-16-13/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_4_25_20_linear_constant_0_none_0/sompt22_train_4_25_20_linear_constant_0_none_0.mp4 ctdet 3							4 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/embedding/sompt22_RTX4090_epochs_100_lrstep_90_lr_2.5e-6/logs_2024-02-06-16-13/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_linear_constant_0_none_0/sompt22_train_6_25_20_linear_constant_0_none_0.mp4 ctdet 3							6 people	crowdhuman.pth
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/embedding/sompt22_RTX4090_epochs_100_lrstep_90_lr_2.5e-6/logs_2024-02-06-16-13/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4.mp4 ctdet 3			6 people
+
+==================================================================================== training task: tracking,embedding ===============================================================
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking,embedding/mot20_RTX3090_epochs_30_lrstep_25_lr_1.25e-5/logs_2024-01-14-16-00/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3           					2 people 	divo model_last.pth	multi_loss:fix
+
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking,embedding/mot20_RTX3090_epochs_30_lrstep_25_lr_1.25e-5/logs_2024-01-14-16-00/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_4_25_20_linear_constant_0_none_0/sompt22_train_4_25_20_linear_constant_0_none_0.mp4 ctdet 3							4 people	divo model_last.pth	multi_loss:fix
+
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking,embedding/mot20_RTX3090_epochs_30_lrstep_25_lr_1.25e-5/logs_2024-01-14-16-00/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_linear_constant_0_none_0/sompt22_train_6_25_20_linear_constant_0_none_0.mp4 ctdet 3							6 people	divo model_last.pth	multi_loss:fix
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking,embedding/mot20_RTX3090_epochs_30_lrstep_25_lr_1.25e-5/logs_2024-01-14-16-00/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4/sompt22_train_6_25_20_vertical_lemniscate_constant_4_none_4.mp4 ctdet 3			6 people
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking,embedding/divo_RTX4090_epochs_30_lrstep_25_lr_5e-4/logs_2024-01-14-09-50/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3           					COK KOTU 		multi_loss:fix
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking,embedding/divo_RTX3090_epochs_30_lrstep_40_lr_2.5e-4/logs_2024-01-07-19-40/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3           					COK KOTU 		multi_loss:fix
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking,embedding/kd_sompt22_RTX4090_epochs_30_lrstep_25_lr_2.5e-4/logs_2024-02-20-09-14_weight_1_1/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3					KOTU
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking,embedding/sompt22_RTX4090_epochs_30_lrstep_25_lr_2.5e-4_bs_8_task_tracking,embedding_kd_0.4/logs_2024-03-04-20-01/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3		HIC BIR OBJEYI BULMUYOR
+
+bash experiments/inference.sh /home/fatih/phd/FairCenterMOT/exp/tracking,embedding/sompt22_RTX3090_epochs_30_lrstep_20_lr_2.5e-3/logs_2024-02-12-22-26/model_last.pth data/sompt22-train-sim/images/test/sompt22_train_2_25_20_linear_constant_0_none_0/sompt22_train_2_25_20_linear_constant_0_none_0.mp4 ctdet 3							KOTU
+
+
+
+
+
+
+
+
+
+
+
+
+

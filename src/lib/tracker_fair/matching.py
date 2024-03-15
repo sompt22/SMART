@@ -4,7 +4,7 @@ import scipy
 import lap
 from scipy.spatial.distance import cdist
 import matplotlib.pyplot as plt
-import seaborn as sns
+#import seaborn as sns
 
 from cython_bbox import bbox_overlaps as bbox_ious
 from utils import kalman_filter
