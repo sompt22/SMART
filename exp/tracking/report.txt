@@ -1,0 +1,14 @@
+exp1 
+model sompt22_RTX4090_epochs_30_lrstep_25_lr_2.5e-4_bs_12_task_tracking_kd_0 
+video sompt22_train_2_25_20_linear_constant_0_none_0
+
+exp2 
+model sompt22_RTX4090_epochs_30_lrstep_25_lr_2.5e-5_bs_12_task_tracking_kd_0 
+video sompt22_train_2_25_20_linear_constant_0_none_0
+
+exp3 
+model sompt22_RTX4090_epochs_30_lrstep_25_lr_2.5e-6_bs_12_task_tracking_kd_0 
+video sompt22_train_2_25_20_linear_constant_0_none_0
+
+
+Açıklama: Bu üç deneyde SMART tracking task'ı ile eğitilmiştir. BBOX scale sorunu 3 eğitimde de vardır ama lr 2.5e-6 ile eğitilen model obje merkezleri çok daha az kaçırmaktadır. 

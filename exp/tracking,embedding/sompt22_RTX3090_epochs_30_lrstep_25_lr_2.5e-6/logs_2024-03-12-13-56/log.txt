@@ -1,0 +1,36 @@
+2024-03-12-14-12: epoch: 1 |tot 7.164482 | hm 1.155576 | wh 1.963797 | reg 0.215118 | embedding 1.127414 | ltrb_amodal 2.326591 | tracking 0.402721 | time 15.683333 | 
+2024-03-12-14-27: epoch: 2 |tot 5.756988 | hm 0.819826 | wh 1.548300 | reg 0.210876 | embedding 1.123602 | ltrb_amodal 1.854567 | tracking 0.390557 | time 15.550000 | 
+2024-03-12-14-43: epoch: 3 |tot 5.360537 | hm 0.741827 | wh 1.418367 | reg 0.207390 | embedding 1.120405 | ltrb_amodal 1.620259 | tracking 0.385229 | time 15.533333 | 
+2024-03-12-14-59: epoch: 4 |tot 5.124138 | hm 0.695649 | wh 1.337902 | reg 0.205148 | embedding 1.117743 | ltrb_amodal 1.485497 | tracking 0.382027 | time 15.550000 | 
+2024-03-12-15-14: epoch: 5 |tot 4.977746 | hm 0.665703 | wh 1.289117 | reg 0.203967 | embedding 1.115293 | ltrb_amodal 1.392191 | tracking 0.382426 | time 15.566667 | 
+2024-03-12-15-26: tot 5.038560 | hm 0.731484 | wh 1.427540 | reg 0.203381 | embedding 1.124108 | ltrb_amodal 1.025552 | tracking 0.355217 | time 11.766667 | 
+2024-03-12-15-42: epoch: 6 |tot 4.842390 | hm 0.640164 | wh 1.240902 | reg 0.202389 | embedding 1.113055 | ltrb_amodal 1.324378 | tracking 0.379586 | time 15.550000 | 
+2024-03-12-15-57: epoch: 7 |tot 4.734384 | hm 0.620037 | wh 1.201637 | reg 0.201313 | embedding 1.111085 | ltrb_amodal 1.254600 | tracking 0.378613 | time 15.583333 | 
+2024-03-12-16-13: epoch: 8 |tot 4.674006 | hm 0.607807 | wh 1.177449 | reg 0.200451 | embedding 1.109263 | ltrb_amodal 1.227206 | tracking 0.378696 | time 15.583333 | 
+2024-03-12-16-28: epoch: 9 |tot 4.602002 | hm 0.595697 | wh 1.141420 | reg 0.199753 | embedding 1.107560 | ltrb_amodal 1.191511 | tracking 0.376797 | time 15.583333 | 
+2024-03-12-16-44: epoch: 10 |tot 4.531809 | hm 0.583400 | wh 1.117904 | reg 0.198878 | embedding 1.105943 | ltrb_amodal 1.152002 | tracking 0.374924 | time 15.583333 | 
+2024-03-12-16-55: tot 4.778554 | hm 0.690387 | wh 1.301661 | reg 0.200285 | embedding 1.121748 | ltrb_amodal 0.830043 | tracking 0.350844 | time 10.850000 | 
+2024-03-12-17-10: epoch: 11 |tot 4.487646 | hm 0.575014 | wh 1.098372 | reg 0.197848 | embedding 1.104358 | ltrb_amodal 1.131305 | tracking 0.375187 | time 15.566667 | 
+2024-03-12-17-26: epoch: 12 |tot 4.458862 | hm 0.568936 | wh 1.082906 | reg 0.197777 | embedding 1.102960 | ltrb_amodal 1.112195 | tracking 0.376370 | time 15.600000 | 
+2024-03-12-17-42: epoch: 13 |tot 4.414933 | hm 0.561425 | wh 1.065922 | reg 0.197027 | embedding 1.101606 | ltrb_amodal 1.097085 | tracking 0.374635 | time 15.600000 | 
+2024-03-12-17-57: epoch: 14 |tot 4.369699 | hm 0.553047 | wh 1.045009 | reg 0.196857 | embedding 1.100316 | ltrb_amodal 1.075084 | tracking 0.373829 | time 15.616667 | 
+2024-03-12-18-13: epoch: 15 |tot 4.347710 | hm 0.550402 | wh 1.033317 | reg 0.195980 | embedding 1.099006 | ltrb_amodal 1.061054 | tracking 0.373596 | time 15.600000 | 
+2024-03-12-18-25: tot 4.690279 | hm 0.678607 | wh 1.241755 | reg 0.198992 | embedding 1.121731 | ltrb_amodal 0.757268 | tracking 0.349432 | time 11.700000 | 
+2024-03-12-18-40: epoch: 16 |tot 4.306295 | hm 0.541395 | wh 1.020597 | reg 0.195646 | embedding 1.097702 | ltrb_amodal 1.043466 | tracking 0.373530 | time 15.583333 | 
+2024-03-12-18-56: epoch: 17 |tot 4.273613 | hm 0.536929 | wh 1.004177 | reg 0.195102 | embedding 1.096479 | ltrb_amodal 1.017749 | tracking 0.373026 | time 15.600000 | 
+2024-03-12-19-11: epoch: 18 |tot 4.246469 | hm 0.533292 | wh 0.993885 | reg 0.194647 | embedding 1.095363 | ltrb_amodal 1.008405 | tracking 0.371047 | time 15.616667 | 
+2024-03-12-19-27: epoch: 19 |tot 4.225661 | hm 0.528000 | wh 0.987028 | reg 0.194597 | embedding 1.094192 | ltrb_amodal 0.994887 | tracking 0.372409 | time 15.616667 | 
+2024-03-12-19-43: epoch: 20 |tot 4.209876 | hm 0.526582 | wh 0.980478 | reg 0.194172 | embedding 1.093265 | ltrb_amodal 0.983972 | tracking 0.371451 | time 15.633333 | 
+2024-03-12-19-54: tot 4.685554 | hm 0.681808 | wh 1.213661 | reg 0.198790 | embedding 1.122538 | ltrb_amodal 0.736642 | tracking 0.349456 | time 11.700000 | 
+2024-03-12-20-10: epoch: 21 |tot 4.197233 | hm 0.523284 | wh 0.973891 | reg 0.194006 | embedding 1.092079 | ltrb_amodal 0.984233 | tracking 0.372104 | time 15.600000 | 
+2024-03-12-20-26: epoch: 22 |tot 4.161697 | hm 0.517929 | wh 0.962199 | reg 0.193617 | embedding 1.091102 | ltrb_amodal 0.953691 | tracking 0.371336 | time 15.633333 | 
+2024-03-12-20-41: epoch: 23 |tot 4.142175 | hm 0.516181 | wh 0.951248 | reg 0.193399 | embedding 1.090270 | ltrb_amodal 0.937853 | tracking 0.370215 | time 15.633333 | 
+2024-03-12-20-57: epoch: 24 |tot 4.124195 | hm 0.513363 | wh 0.945699 | reg 0.192887 | embedding 1.089379 | ltrb_amodal 0.922349 | tracking 0.370397 | time 15.633333 | 
+2024-03-12-21-13: epoch: 25 |tot 4.113091 | hm 0.510370 | wh 0.939148 | reg 0.192783 | embedding 1.088461 | ltrb_amodal 0.914094 | tracking 0.371895 | time 15.633333 | 
+2024-03-12-21-24: tot 4.670971 | hm 0.680304 | wh 1.187291 | reg 0.198298 | embedding 1.123091 | ltrb_amodal 0.729673 | tracking 0.349953 | time 11.733333 | 
+2024-03-12-21-40: epoch: 26 |tot 4.089753 | hm 0.506188 | wh 0.936692 | reg 0.192368 | embedding 1.087939 | ltrb_amodal 0.904088 | tracking 0.370634 | time 15.650000 | 
+2024-03-12-21-56: epoch: 27 |tot 4.096124 | hm 0.508710 | wh 0.936002 | reg 0.192521 | embedding 1.087799 | ltrb_amodal 0.896973 | tracking 0.370806 | time 15.633333 | 
+2024-03-12-22-11: epoch: 28 |tot 4.099248 | hm 0.507811 | wh 0.938823 | reg 0.192520 | embedding 1.087880 | ltrb_amodal 0.904484 | tracking 0.371619 | time 15.633333 | 
+2024-03-12-22-27: epoch: 29 |tot 4.086547 | hm 0.505951 | wh 0.935660 | reg 0.192358 | embedding 1.087691 | ltrb_amodal 0.901651 | tracking 0.370331 | time 15.633333 | 
+2024-03-12-22-43: epoch: 30 |tot 4.101903 | hm 0.507563 | wh 0.938569 | reg 0.192672 | embedding 1.087686 | ltrb_amodal 0.905651 | tracking 0.372545 | time 15.666667 | 
+2024-03-12-22-55: tot 4.675610 | hm 0.681348 | wh 1.192146 | reg 0.198419 | embedding 1.123089 | ltrb_amodal 0.736338 | tracking 0.349095 | time 11.766667 | 

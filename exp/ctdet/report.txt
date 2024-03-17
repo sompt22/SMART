@@ -1,0 +1,20 @@
+exp1 
+model sompt22_RTX3090_epochs_30_lrstep_25_lr_2.5e-4
+video sompt22_train_2_25_20_linear_constant_0_none_0
+
+exp2 
+model sompt22_RTX3090_epochs_30_lrstep_25_lr_2.5e-5 
+video sompt22_train_2_25_20_linear_constant_0_none_0
+
+exp3 
+model sompt22_RTX3090_epochs_30_lrstep_25_lr_2.5e-6 
+video sompt22_train_2_25_20_linear_constant_0_none_0
+
+
+Açıklama: Bu üç deneyde SMART ctdet task'ı ile eğitilmiştir. LR 2.5e-4 ve 2.5e-5 ile eğitilen modeller hem false pozitif bulmakta, hem true pozitif kaçırmaktadır. LR 2.5e-6 ile eğitilen model true pozitifleri hiç kaçırmamaktadır, arada false pozitif bulmaktadır. 
+
+exp4
+model sompt22_RTX3090_epochs_70_lrstep_25_lr_2.5e-6 
+video sompt22_train_2_25_20_linear_constant_0_none_0
+
+Aciklama: exp4 70 epoch, exp3 30 epoch egitildi. exp4'te daha fazla false pozitif var. Daha uzun egitince overfit olmus sanki
