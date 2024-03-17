@@ -77,3 +77,4 @@ class SOMPT22_TRAIN_SIM(GenericDataset):
   
   def run_eval(self, results, save_dir):
     self.save_results(results, save_dir)
+

@@ -31,7 +31,6 @@ class MOT(GenericDataset):
       ann_file = '{}.json'.format('val_half')
     img_dir = os.path.join(data_dir, '{}'.format(
       'test' if 'test' in self.dataset_version else 'train'))
-    
     print('ann_file', ann_file)
     ann_path = os.path.join(data_dir, 'annotations', ann_file)
 

@@ -34,7 +34,7 @@ class MOT20(GenericDataset):
     super(MOT20, self).__init__(opt, split, ann_path, img_dir)
 
     self.num_samples = len(self.images)
-    print('Loaded mot20 {} {} samples'.format(split, self.num_samples))
+    print('Loaded MOT20 {} {} samples'.format(split, self.num_samples))
 
   def _to_float(self, x):
     return float("{:.2f}".format(x))
@@ -77,4 +77,3 @@ class MOT20(GenericDataset):
   
   def run_eval(self, results, save_dir):
     self.save_results(results, save_dir)
-

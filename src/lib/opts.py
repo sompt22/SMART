@@ -14,7 +14,7 @@ class opts(object):
     self.parser.add_argument('task', default='',
                              help='ctdet | ddd | multi_pose '
                              '| tracking | embedding or combined with ,')
-    self.parser.add_argument('--dataset', default='crowdhuman',
+    self.parser.add_argument('--dataset', default='coco',
                              help='see lib/dataset/dataset_facotry for ' + 
                             'available datasets')
     self.parser.add_argument('--test_dataset', default='',

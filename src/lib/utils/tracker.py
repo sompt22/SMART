@@ -11,42 +11,33 @@ class Tracker(object):
     self.opt = opt
     self.reset()
     self.frm_count = 0
-    if "embedding" in self.opt.task and "tracking" in self.opt.task:
-      self.embedding_history = dict()
-      self.smoothing_window = 10
-      if self.opt.debug == 4:
-        self.tracking_embedding_match_matrix = os.path.join(pathlib.Path().resolve(), "..", "exp", self.opt.task, self.opt.exp_id, "debug", "tracking_embedding.txt")
-        dir_path = os.path.dirname(self.tracking_embedding_match_matrix)
-        if not os.path.exists(dir_path):
-          os.makedirs(dir_path)
-        self.tracking_embedding_matrix = open(self.tracking_embedding_match_matrix, "a")  
-    elif "embedding" in self.opt.task:
-      self.embedding_history = dict()
-      self.smoothing_window = 10
-      if self.opt.debug == 4:
-        self.embedding_match_matrix = os.path.join(pathlib.Path().resolve(),"..","exp", self.opt.task, self.opt.exp_id, "debug", "embedding.txt")
-        dir_path = os.path.dirname(self.embedding_match_matrix)
-        if not os.path.exists(dir_path):
-          os.makedirs(dir_path)
-        self.embedding_matrix = open(self.embedding_match_matrix, "a")  
-    elif "tracking" in self.opt.task:
-      if self.opt.debug == 4:
-        self.tracking_match_matrix = os.path.join(pathlib.Path().resolve(),"..","exp", self.opt.task, self.opt.exp_id, "debug", "tracking.txt")
-        dir_path = os.path.dirname(self.tracking_match_matrix)
-        if not os.path.exists(dir_path):
-          os.makedirs(dir_path)
-        self.tracking_matrix = open(self.tracking_match_matrix, "a")
-           
+    self.embedding_history = dict()
+    self.smoothing_window = 10    
+    self.initialize_files()
+  
+  def initialize_files(self):
+    if self.opt.debug == 4:
+      base_dir = os.path.join(pathlib.Path().resolve(), "..", "exp", self.opt.task, self.opt.exp_id, "debug")
+      self.file_paths = {
+          'tracking': "tracking.txt",
+          'embedding': "embedding.txt",
+          'tracking,embedding': "tracking_embedding.txt"
+      }
+      tasks = self.opt.task.split(",")  # Split the task string into a list of individual tasks
+      for key, file_name in self.file_paths.items():
+        # Check if the key exactly matches any of the tasks (or task combinations) specified in self.opt.task
+        if any(task.strip() == key for task in tasks):
+          full_path = os.path.join(base_dir, file_name)
+          os.makedirs(os.path.dirname(full_path), exist_ok=True)
+          setattr(self, f"{key.replace(',', '_')}_matrix", open(full_path, "a"))
+            
   def init_track(self, results):
     for item in results:
       if item['score'] > self.opt.new_thresh:
         self.id_count += 1
         # active and age are never used in the paper
-        item['active'] = 1
-        item['age'] = 1
-        item['tracking_id'] = self.id_count
-        item['embedding'] = []
-        if not ('ct' in item):
+        item.update({'active': 1, 'age': 1, 'tracking_id': self.id_count, 'embedding': []})
+        if 'ct' not in item:
           bbox = item['bbox']
           item['ct'] = [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2]
         self.tracks.append(item)
@@ -55,7 +46,9 @@ class Tracker(object):
     self.id_count = 0
     self.tracks = []
     self.frm_count = 0
-
+    self.embedding_history = dict() if "embedding" in self.opt.task else None
+    self.smoothing_window = 10 if self.embedding_history is not None else None
+    
   def step(self, results, public_det=None):
     self.frm_count += 1 
     N = len(results) # Number of Detections
@@ -177,12 +170,12 @@ class Tracker(object):
              
     ret = []
     for m in matched_indices:
-      if m[0] < len(results) and m[1] < len(self.tracks):
-        track = results[m[0]]
-        track['tracking_id'] = self.tracks[m[1]]['tracking_id']
-        track['age'] = 1
-        track['active'] = self.tracks[m[1]]['active'] + 1
-        ret.append(track)
+      #if m[0] < len(results) and m[1] < len(self.tracks):
+      track = results[m[0]]
+      track['tracking_id'] = self.tracks[m[1]]['tracking_id']
+      track['age'] = 1
+      track['active'] = self.tracks[m[1]]['active'] + 1
+      ret.append(track)
 
     # Private detection: create tracks for all un-matched detections
     for i in unmatched_dets:

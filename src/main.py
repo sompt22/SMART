@@ -17,11 +17,18 @@ from trainer import Trainer
 
 def get_optimizer(opt, model):
   if opt.optim == 'adam':
+    print('Using Adam')
     optimizer = torch.optim.Adam(model.parameters(), opt.lr)
   elif opt.optim == 'sgd':
     print('Using SGD')
     optimizer = torch.optim.SGD(
       model.parameters(), opt.lr, momentum=0.9, weight_decay=0.0001)
+  elif opt.optim == 'adamw':
+    print('Using AdamW')
+    optimizer = torch.optim.AdamW(model.parameters(), opt.lr)
+  elif opt.optim == 'separate':
+    print('Using separate')
+    optimizer = get_optimizer_separate(opt, model)
   else:
     assert 0, opt.optim
   return optimizer

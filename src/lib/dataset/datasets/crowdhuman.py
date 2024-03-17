@@ -13,7 +13,7 @@ from ..generic_dataset import GenericDataset
 class CrowdHuman(GenericDataset):
   num_classes = 1
   num_joints = 17
-  default_resolution = [384, 640] #####################################################################
+  default_resolution = [512, 512]
   max_objs = 128
   class_name = ['person']
   cat_ids = {1: 1}

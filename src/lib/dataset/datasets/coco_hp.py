@@ -14,7 +14,7 @@ class COCOHP(GenericDataset):
   num_categories = 1
   class_name = ['']
   num_joints = 17
-  default_resolution = [384, 640] #####################################################################
+  default_resolution = [512, 512]
   flip_idx = [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10], 
               [11, 12], [13, 14], [15, 16]]
   edges = [[0, 1], [0, 2], [1, 3], [2, 4], 
@@ -55,7 +55,6 @@ class COCOHP(GenericDataset):
     return float("{:.2f}".format(x))
 
   def convert_eval_format(self, all_bboxes):
-    # import pdb; pdb.set_trace()
     detections = []
     for image_id in all_bboxes:
       if type(all_bboxes[image_id]) != type({}):
