@@ -12,7 +12,7 @@ import copy
 from ..generic_dataset import GenericDataset
 
 class COCO(GenericDataset):
-  default_resolution = [512, 512]
+  default_resolution = [544, 960]
   num_categories = 80
   class_name = [
     'person', 'bicycle', 'car', 'motorcycle', 'airplane',
