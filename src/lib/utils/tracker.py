@@ -100,7 +100,7 @@ class Tracker(object):
         self.tracking_embedding_matrix.write(str(matched_indices) + "\n")
         self.tracking_embedding_matrix.write("Unmatched Detections: " + str(unmatched_dets) + "\n")
         self.tracking_embedding_matrix.write("Unmatched Tracks: " + str(unmatched_tracks) + "\n")
-        path = os.path.join(pathlib.Path().resolve(), "..", "exp", self.opt.task, self.opt.exp_id, "debug")  
+        #path = os.path.join(pathlib.Path().resolve(), "..", "exp", self.opt.task, self.opt.exp_id, "debug")  
         #matching.plot_cost_matrices(cos_sim_inv, adjusted_cos_sim, matched_indices ,path +f'/{self.frm_count}cosine_similarity_matrices.png')        
 
       # Step 4: Apply Greedy Matching for Unmatched Detections and Tracks
@@ -152,9 +152,13 @@ class Tracker(object):
       cos_sim, cos_sim_inv = matching.embedding_distance(tracks_emb, dets_emb)                # cosine similarity of Detections & Tracks (0 match, 1 mismatch)
       invalid_tr = np.transpose(invalid) 
       adjusted_cos_sim = matching.adjust_similarity_with_gating(cos_sim_inv,invalid_tr)       # Adjust similarity with gating       
-      matched_indices, unmatched_tracks, unmatched_dets = matching.linear_assignment(adjusted_cos_sim, thresh=0.5)           
+      matched_indices, unmatched_tracks, unmatched_dets = matching.linear_assignment(adjusted_cos_sim, thresh=0.8)           
       if self.opt.debug == 4:      
         self.embedding_matrix.write("Frame: " + str(self.frm_count) + "\n")
+        self.embedding_matrix.write('Detection Embeddings: \n')
+        self.embedding_matrix.write(str(dets_emb) + "\n")
+        self.embedding_matrix.write('Track Embeddings: \n')
+        self.embedding_matrix.write(str(tracks_emb) + "\n")
         self.embedding_matrix.write("Invalid Transpose: \n")   
         self.embedding_matrix.write(str(invalid_tr) + "\n")
         self.embedding_matrix.write("Cosine Similarity Matrix: \n")
@@ -165,8 +169,8 @@ class Tracker(object):
         self.embedding_matrix.write(str(matched_indices) + "\n")
         self.embedding_matrix.write("Unmatched Detections: " + str(unmatched_dets) + "\n")
         self.embedding_matrix.write("Unmatched Tracks: " + str(unmatched_tracks) + "\n")
-        path = os.path.join(pathlib.Path().resolve(), "..", "exp", self.opt.task, self.opt.exp_id, "debug")  
-        matching.plot_cost_matrices(cos_sim_inv, adjusted_cos_sim, matched_indices ,path +f'/{self.frm_count}cosine_similarity_matrices.png')
+        #path = os.path.join(pathlib.Path().resolve(), "..", "exp", self.opt.task, self.opt.exp_id, "debug")  
+        #matching.plot_cost_matrices(cos_sim_inv, adjusted_cos_sim, matched_indices ,path +f'/{self.frm_count}cosine_similarity_matrices.png')
              
     ret = []
     for m in matched_indices:
