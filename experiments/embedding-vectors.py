@@ -6,6 +6,16 @@ import os
 import cv2
 import random
 
+"""
+ from sklearn.metrics.pairwise import cosine_similarity
+ X = [[0, 0, 0], [1, 1, 1]]
+ Y = [[1, 0, 0], [1, 1, 0]]
+ cosine_similarity(X, Y)
+array([[0.     , 0.     ],
+       [0.57..., 0.81...]])
+"""
+
+
 def load_json_data(file_path):
     with open(file_path, 'r') as file:
         data = json.load(file)
@@ -48,6 +58,7 @@ def calculate_similarities(track_embeddings):
         if embeddings.size == 0:  # Skip tracks with no embeddings
             continue
         # Calculate intra-track similarities
+        print('Shape of embeddings 1:', embeddings.shape) #Shape of embeddings 1: (1800, 128)
         similarities = cosine_similarity(embeddings)
         intra_similarities[track_id] = similarities[np.triu_indices(len(embeddings), k=1)]
 
@@ -64,6 +75,7 @@ def calculate_similarities(track_embeddings):
                 # Skip similarity calculation if either set of embeddings is empty
                 if embeddings_i.size == 0 or embeddings_j.size == 0:
                     continue
+                print('Shape of embeddings 2:', embeddings_i.shape, embeddings_j.shape) # Shape of embeddings 2: (1800, 128) (722, 128)
                 similarities = cosine_similarity(embeddings_i, embeddings_j)
                 inter_similarities.extend(similarities.flatten())
     return intra_similarities, inter_similarities
@@ -77,6 +89,7 @@ def plot_similarity_matrices(track_embeddings, output_dir):
         if embeddings.size == 0:  # Skip tracks with no embeddings
             print(f"Skipping track ID {track_id} due to no embeddings.")
             continue
+        print('Shape of embeddings 3:', embeddings.shape) # Shape of embeddings 3: (1800, 128)
         similarity_matrix = cosine_similarity(embeddings)
         plt.figure(figsize=(10, 8))
         plt.imshow(similarity_matrix, cmap='hot', interpolation='nearest')
