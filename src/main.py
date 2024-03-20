@@ -14,8 +14,61 @@ from logger import Logger
 from dataset.dataset_factory import get_dataset
 from trainer import Trainer
 
+freeze_components = {
+  'base': True,         # Freezing the base network
+  'dla_up': True,       # Freezing upsample layers
+  'ida_up': True,       # Freezing upsample layers
+  'hm': True,           # Freezing hm head
+  'reg': True,          # Freezing reg head
+  'wh': True,           # Freezing wh head
+  'ltrb_amodal': True,  # Freezing ltrb_amodal head
+  'embedding': False,   # Keeping specific heads trainable
+  'tracking': False,    # Keeping specific heads trainable
+}
 
-def get_optimizer(opt, model):
+def set_requires_grad(nets, requires_grad=False):
+  """Helper function to set requires_grad for components in a model."""
+  if not isinstance(nets, list):
+    nets = [nets]
+  for net in nets:
+    if net is not None:
+      for param in net.parameters():
+        param.requires_grad = requires_grad
+
+def initialize_and_freeze_model_components(opt, model):
+    # Freezing base network (if considered as backbone)
+    if 'base' in freeze_components and freeze_components['base']:
+        set_requires_grad(model.base, requires_grad=False)
+    
+    # Freezing task-specific heads
+    for head_name in ['hm', 'reg', 'wh', 'embedding', 'tracking', 'ltrb_amodal']:
+        if head_name in freeze_components and freeze_components[head_name]:
+            set_requires_grad(getattr(model, head_name), requires_grad=False)
+
+    # Example: Freezing additional components like dla_up or ida_up if needed
+    # Adjust based on your freeze_components options
+    if 'dla_up' in freeze_components and freeze_components['dla_up']:
+        set_requires_grad(model.dla_up, requires_grad=False)
+    if 'ida_up' in freeze_components and freeze_components['ida_up']:
+        set_requires_grad(model.ida_up, requires_grad=False)
+
+    return model
+
+def get_optimizer(opt, parameters):
+  if opt.optim == 'adam':
+    print('Using Adam')
+    optimizer = torch.optim.Adam(parameters, opt.lr)  # Use 'parameters' directly
+  elif opt.optim == 'sgd':
+    print('Using SGD')
+    optimizer = torch.optim.SGD(parameters, opt.lr, momentum=0.9, weight_decay=0.0001)
+  elif opt.optim == 'adamw':
+    print('Using AdamW')
+    optimizer = torch.optim.AdamW(parameters, opt.lr)
+  else:
+    assert 0, opt.optim
+  return optimizer
+
+def get_optimizer__(opt, model):
   if opt.optim == 'adam':
     print('Using Adam')
     optimizer = torch.optim.Adam(model.parameters(), opt.lr)
@@ -32,6 +85,7 @@ def get_optimizer(opt, model):
   else:
     assert 0, opt.optim
   return optimizer
+
 
 def get_optimizer_separate(opt, model):
     # Define base learning rate
@@ -106,7 +160,10 @@ def main(opt):
   print(f'Unique track ids: {opt.nID}')
   print('Creating model...')
   model = create_model(opt.arch, opt.heads, opt.head_conv, opt=opt)
-  optimizer = get_optimizer(opt, model)
+  model = initialize_and_freeze_model_components(opt, model)
+  #print(model)
+  #optimizer = get_optimizer(opt, model)
+  optimizer = get_optimizer(opt, filter(lambda p: p.requires_grad, model.parameters()))
   start_epoch = 0
   if opt.load_model != '':
     model, optimizer, start_epoch = load_model(
