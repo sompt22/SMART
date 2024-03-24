@@ -159,7 +159,7 @@ def iou_distance(atracks, btracks):
 
     return cost_matrix
 
-def embedding_distance(tracks, detections, metric='cosine'):
+def embedding_distance___(tracks, detections, metric='cosine'):
     """
     :param tracks: list[STrack]
     :param detections: list[BaseTrack]
@@ -200,7 +200,6 @@ def embedding_distance(tracks, detections, metric='cosine'):
 
     return cost_matrix, cost_matrix_inv
 
-
 def embedding_distance_(tracks, detections, metric='cosine'):
     """
     :param tracks: list[STrack]
@@ -210,12 +209,21 @@ def embedding_distance_(tracks, detections, metric='cosine'):
     """
 
     cost_matrix = np.zeros((len(tracks), len(detections)), dtype=np.float)
+    cost_matrix_inv = np.zeros((len(tracks), len(detections)), dtype=np.float)
     if cost_matrix.size == 0:
-        return cost_matrix
+        return cost_matrix, cost_matrix_inv
     #det_features = np.asarray([track.curr_feat for track in detections], dtype=np.float)
     #for i, track in enumerate(tracks):
         #cost_matrix[i, :] = np.maximum(0.0, cdist(track.smooth_feat.reshape(1,-1), det_features, metric))
     #track_features = np.asarray([track.smooth_feat for track in tracks], dtype=np.float)
+    cost_matrix = np.maximum(0.0, cdist(tracks, detections, metric))  # Nomalized features
+    cost_matrix_inv = 1. - cost_matrix
+    return cost_matrix, cost_matrix_inv
+
+def embedding_distance(tracks, detections, metric='cosine'):
+    cost_matrix = np.zeros((len(tracks), len(detections)), dtype=np.float)
+    if cost_matrix.size == 0:
+        return cost_matrix
     cost_matrix = np.maximum(0.0, cdist(tracks, detections, metric))  # Nomalized features
     return cost_matrix
 

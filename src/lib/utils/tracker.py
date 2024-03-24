@@ -53,6 +53,7 @@ class Tracker(object):
     self.frm_count += 1 
     N = len(results) # Number of Detections
     M = len(self.tracks) # Number of Tracks
+    print(f"Frame: {self.frm_count} | Detections: {N} | Tracks: {M}")
     if 'tracking' in self.opt.task:
       dets = np.array([det['ct'] + det['tracking'] for det in results], np.float32) # N x 2
     else:
@@ -67,9 +68,10 @@ class Tracker(object):
     tracks = np.array([pre_det['ct'] for pre_det in self.tracks], np.float32) # M x 2
 
     lse_dist = (((tracks.reshape(1, -1, 2) - dets.reshape(-1, 1, 2)) ** 2).sum(axis=2)) # N x M L2 Norm = Least Square Error (LSE)
-
+    print(f"Least Square Error (LSE) Matrix: {lse_dist.shape} (Detections x Tracks)")
     ## Gating for box size
     invalid = ((lse_dist > track_size.reshape(1, M)) + (lse_dist > item_size.reshape(N, 1)) + (item_cat.reshape(N, 1) != track_cat.reshape(1, M))) > 0
+    print(f"Invalid Matrix: {invalid.shape} (Detections x Tracks)")
     lse_dist = lse_dist + invalid * 1e18
     
     if 'embedding' in self.opt.task and 'tracking' in self.opt.heads:
@@ -147,24 +149,41 @@ class Tracker(object):
         self.tracking_matrix.write("Unmatched Tracks: " + str(unmatched_tracks) + "\n")
     elif 'embedding' in self.opt.task:
       print("embedding")
+      print(f"Length of results: {len(results)}") 
+      print(f"Length of self.tracks: {len(self.tracks)}")
       dets_emb = np.asarray([det['embedding'] for det in results], np.float32)                # N x embedding_dim   
       tracks_emb = np.asarray([pre_det['embedding'] for pre_det in self.tracks], np.float32)  # M x embedding_dim
-      cos_sim, cos_sim_inv = matching.embedding_distance(tracks_emb, dets_emb)                # cosine similarity of Detections & Tracks (0 match, 1 mismatch)
-      invalid_tr = np.transpose(invalid) 
-      adjusted_cos_sim = matching.adjust_similarity_with_gating(cos_sim_inv,invalid_tr)       # Adjust similarity with gating       
-      matched_indices, unmatched_tracks, unmatched_dets = matching.linear_assignment(adjusted_cos_sim, thresh=0.8)           
+      cos_sim = matching.embedding_distance(tracks_emb, dets_emb)                             # cosine similarity of Detections & Tracks (0 match, 1 mismatch)
+      invalid_tr = np.transpose(invalid)
+      print('cos_sim')
+      print(cos_sim) 
+      #adjusted_cos_sim = matching.adjust_similarity_with_gating(cos_sim_inv,invalid)       # Adjust similarity with gating       
+      matched_indices, unmatched_tracks, unmatched_dets = matching.linear_assignment(cos_sim, thresh=0.5)           
       if self.opt.debug == 4:      
         self.embedding_matrix.write("Frame: " + str(self.frm_count) + "\n")
+        self.embedding_matrix.write('Dets Embedding Shape: ' + str(dets_emb.shape) + "\n")
+        self.embedding_matrix.write('Tracks Embedding Shape: ' + str(tracks_emb.shape) + "\n")
+        self.embedding_matrix.write('cos_sim Shape: ' + str(cos_sim.shape) + "\n")
+        self.embedding_matrix.write('Invalid Transpose Shape: ' + str(invalid_tr.shape) + "\n")
+        self.embedding_matrix.write('Invalid Shape: ' + str(invalid.shape) + "\n")
+        self.embedding_matrix.write('Detection Scores: \n')
+        self.embedding_matrix.write(str([det['score'] for det in results]) + "\n")
+        self.embedding_matrix.write('Track Scores: \n')
+        self.embedding_matrix.write(str([track['score'] for track in self.tracks]) + "\n")
         self.embedding_matrix.write('Detection Embeddings: \n')
         self.embedding_matrix.write(str(dets_emb) + "\n")
+        self.embedding_matrix.write('Detection Embedding Min Max: \n')
+        self.embedding_matrix.write(str([np.min(det['embedding']) for det in results]) + "\n")
+        self.embedding_matrix.write(str([np.max(det['embedding']) for det in results]) + "\n")
         self.embedding_matrix.write('Track Embeddings: \n')
-        self.embedding_matrix.write(str(tracks_emb) + "\n")
+        self.embedding_matrix.write(str([np.min(tra['embedding']) for tra in self.tracks]) + "\n")
+        self.embedding_matrix.write(str([np.max(tra['embedding']) for tra in self.tracks]) + "\n")
         self.embedding_matrix.write("Invalid Transpose: \n")   
         self.embedding_matrix.write(str(invalid_tr) + "\n")
         self.embedding_matrix.write("Cosine Similarity Matrix: \n")
-        self.embedding_matrix.write(str(cos_sim_inv) + "\n")    
-        self.embedding_matrix.write("Adjusted Cosine Similarity Matrix: \n")
-        self.embedding_matrix.write(str(adjusted_cos_sim) + "\n")    
+        self.embedding_matrix.write(str(cos_sim) + "\n")    
+        #self.embedding_matrix.write("Adjusted Cosine Similarity Matrix: \n")
+        #self.embedding_matrix.write(str(adjusted_cos_sim) + "\n")    
         self.embedding_matrix.write("Matched Indices: \n")
         self.embedding_matrix.write(str(matched_indices) + "\n")
         self.embedding_matrix.write("Unmatched Detections: " + str(unmatched_dets) + "\n")
@@ -172,15 +191,27 @@ class Tracker(object):
         #path = os.path.join(pathlib.Path().resolve(), "..", "exp", self.opt.task, self.opt.exp_id, "debug")  
         #matching.plot_cost_matrices(cos_sim_inv, adjusted_cos_sim, matched_indices ,path +f'/{self.frm_count}cosine_similarity_matrices.png')
              
+    print("Matched indices:")
+    print(matched_indices)
+    print(f"Length of results: {len(results)}")          
+    #print(f"Cost matrix dimensions: {cos_sim.shape} (Tracks x Detections)")         
     ret = []
     for m in matched_indices:
       #if m[0] < len(results) and m[1] < len(self.tracks):
+      track = results[m[1]]
+      track['tracking_id'] = self.tracks[m[0]]['tracking_id']
+      track['age'] = 1
+      track['active'] = self.tracks[m[0]]['active'] + 1
+      ret.append(track)        
+ 
+    """  CENTERTRACK
+    for m in matches:
       track = results[m[0]]
       track['tracking_id'] = self.tracks[m[1]]['tracking_id']
       track['age'] = 1
       track['active'] = self.tracks[m[1]]['active'] + 1
-      ret.append(track)
-
+      ret.append(track)   
+    """      
     # Private detection: create tracks for all un-matched detections
     for i in unmatched_dets:
       track = results[i]
@@ -204,8 +235,8 @@ class Tracker(object):
           bbox[2] + v[0], bbox[3] + v[1]]
         track['ct'] = [ct[0] + v[0], ct[1] + v[1]]
         ret.append(track)
-    if "embedding" in self.opt.heads:
-      ret= matching.embedding_filter(ret, self.embedding_history, self.smoothing_window)          
+    #if "embedding" in self.opt.heads:
+      #ret= matching.embedding_filter(ret, self.embedding_history, self.smoothing_window)          
     self.tracks = ret
     return ret
   
