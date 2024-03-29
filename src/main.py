@@ -14,17 +14,6 @@ from logger import Logger
 from dataset.dataset_factory import get_dataset
 from trainer import Trainer
 
-freeze_components = {
-  'base': True,         # Freezing the base network
-  'dla_up': True,       # Freezing upsample layers
-  'ida_up': True,       # Freezing upsample layers
-  'hm': True,           # Freezing hm head
-  'reg': True,          # Freezing reg head
-  'wh': True,           # Freezing wh head
-  'ltrb_amodal': True,  # Freezing ltrb_amodal head
-  'embedding': False,   # Keeping specific heads trainable
-  'tracking': False,    # Keeping specific heads trainable
-}
 
 def set_requires_grad(nets, requires_grad=False):
   """Helper function to set requires_grad for components in a model."""
@@ -37,19 +26,17 @@ def set_requires_grad(nets, requires_grad=False):
 
 def initialize_and_freeze_model_components(opt, model):
     # Freezing base network (if considered as backbone)
-    if 'base' in freeze_components and freeze_components['base']:
+    if 'base' in opt.freeze_components and opt.freeze_components['base']:
         set_requires_grad(model.base, requires_grad=False)
-    
     # Freezing task-specific heads
     for head_name in ['hm', 'reg', 'wh', 'embedding', 'tracking', 'ltrb_amodal']:
-        if head_name in freeze_components and freeze_components[head_name]:
+        if head_name in opt.freeze_components and opt.freeze_components[head_name]:
             set_requires_grad(getattr(model, head_name), requires_grad=False)
-
     # Example: Freezing additional components like dla_up or ida_up if needed
     # Adjust based on your freeze_components options
-    if 'dla_up' in freeze_components and freeze_components['dla_up']:
+    if 'dla_up' in opt.freeze_components and opt.freeze_components['dla_up']:
         set_requires_grad(model.dla_up, requires_grad=False)
-    if 'ida_up' in freeze_components and freeze_components['ida_up']:
+    if 'ida_up' in opt.freeze_components and opt.freeze_components['ida_up']:
         set_requires_grad(model.ida_up, requires_grad=False)
 
     return model
@@ -185,8 +172,9 @@ def main(opt):
     print(f'Unique track ids after val load: {opt.nID}')
 
   print('Setting up train data...')
+  print("Data is shuffling?:", opt.noshuffle)
   train_loader = torch.utils.data.DataLoader(
-      Dataset(opt, 'train'), batch_size=opt.batch_size, shuffle=True,
+      Dataset(opt, 'train'), batch_size=opt.batch_size, shuffle=opt.noshuffle,
       num_workers=opt.num_workers, pin_memory=True, drop_last=True
   )
   print(f'Unique track ids after train load: {opt.nID}')

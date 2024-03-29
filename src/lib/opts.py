@@ -102,6 +102,9 @@ class opts(object):
     self.parser.add_argument('--msra_outchannel', type=int, default=256)
     self.parser.add_argument('--efficient_level', type=int, default=0)
     self.parser.add_argument('--prior_bias', type=float, default=-4.6) # -2.19
+    self.parser.add_argument('--freeze_components', type=str, default='{}',
+                                 help='Serialized JSON string to specify components to freeze/unfreeze. '
+                                      'E.g., \'{"base": true, "embedding": false}\'')
 
     # input
     self.parser.add_argument('--input_res', type=int, default=-1, 
@@ -204,6 +207,7 @@ class opts(object):
                                   'from CornerNet')
     self.parser.add_argument('--nID', type=int, default=1510,
                              help='Number of unique ID for embedding learning')
+    self.parser.add_argument('--noshuffle', action='store_false')
     # Tracking
     self.parser.add_argument('--tracking', action='store_true')
     self.parser.add_argument('--pre_hm', action='store_true')
@@ -400,6 +404,15 @@ class opts(object):
     print('heads', opt.heads)
     print('weights', opt.weights)
     print('head conv', opt.head_conv)
+
+    print("Model freeze starts.")
+    # Deserialize freeze_components
+    try:
+        opt.freeze_components = json.loads(opt.freeze_components)
+    except json.JSONDecodeError:
+        raise ValueError("Invalid JSON format for --freeze_components")    
+    print("Model freeze ends.")
+
 
     return opt
 

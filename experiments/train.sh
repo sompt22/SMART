@@ -64,6 +64,31 @@ echo "Experiment Name: $exp_name"
 echo "Batch Size: $batch_size"
 
 # Run the training command with the updated parameters
+# ADD --noshuffle flag to stop suffling for dataloader
 cd src
-python main.py "$task" --exp_id "$exp_name" --dataset "$dataset" --know_dist_weight "$kd" --same_aug --ltrb_amodal --pre_hm --hm_disturb 0.05 --lost_disturb 0.4 --fp_disturb 0.1 --num_epochs "$num_epochs" --val_intervals 3 --lr_step "$lr_step" --save_point "$lr_step" --gpus 0 --batch_size "$batch_size" --lr "$lr" --num_workers 8 --num_classes 1 --embedding_loss focal --multi_loss uncertainty --load_model "$premodel"
+python main.py "$task" \
+    --exp_id "$exp_name" \
+    --dataset "$dataset" \
+    --freeze_components '{"base": true, "dla_up": true, "ida_up": true, "hm": true, "reg": true, "wh": true, "ltrb_amodal": true, "embedding": false, "tracking": true}' \
+    --optim adamw \
+    --noshuffle \
+    --know_dist_weight "$kd" \
+    --same_aug \
+    --ltrb_amodal \
+    --pre_hm \
+    --hm_disturb 0.05 \
+    --lost_disturb 0.4 \
+    --fp_disturb 0.1 \
+    --num_epochs "$num_epochs" \
+    --val_intervals 5 \
+    --lr_step "$lr_step" \
+    --save_point "$lr_step" \
+    --gpus 0 \
+    --batch_size "$batch_size" \
+    --lr "$lr" \
+    --num_workers 8 \
+    --num_classes 1 \
+    --embedding_loss focal \
+    --multi_loss uncertainty \
+    --load_model "$premodel"
 cd ..
