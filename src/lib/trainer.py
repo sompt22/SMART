@@ -10,13 +10,12 @@ from progress.bar import Bar
 import math
 import torch.nn as nn
 import torch.nn.functional as F
-from fvcore.nn import sigmoid_focal_loss_jit
 
 from model.data_parallel import DataParallel
 from utils.utils import AverageMeter
 
 from model.losses import FastFocalLoss, RegWeightedL1Loss
-from model.losses import BinRotLoss, WeightedBCELoss
+from model.losses import BinRotLoss, WeightedBCELoss, EmbeddingLoss, EmbeddingVectorLoss
 from model.decode import generic_decode
 from model.utils import _sigmoid, flip_tensor, flip_lr_off, flip_lr, _tranpose_and_gather_feat
 from utils.debugger import Debugger
@@ -27,22 +26,13 @@ class GenericLoss(torch.nn.Module):
     super(GenericLoss, self).__init__()
     self.crit = FastFocalLoss(opt=opt)
     self.crit_reg = RegWeightedL1Loss()
-    self.mse_loss = F.mse_loss
+    self.IDLoss = EmbeddingLoss(opt)
+    self.crit_vector = EmbeddingVectorLoss(opt)
     if 'rot' in opt.heads:
       self.crit_rot = BinRotLoss()
     if 'nuscenes_att' in opt.heads:
       self.crit_nuscenes_att = WeightedBCELoss()
     self.opt = opt
-    self.emb_dim = opt.embedding_dim
-    self.nID = opt.nID
-    self.classifier = nn.Linear(self.emb_dim, self.nID)
-    if opt.embedding_loss == 'focal':
-        torch.nn.init.normal_(self.classifier.weight, std=0.01)
-        prior_prob = 0.01
-        bias_value = -math.log((1 - prior_prob) / prior_prob)
-        torch.nn.init.constant_(self.classifier.bias, bias_value)
-    self.IDLoss = nn.CrossEntropyLoss(ignore_index=-1)
-    self.emb_scale = math.sqrt(2) * math.log(self.nID - 1)
     self.s_det = nn.Parameter(-1.85 * torch.ones(1))
     self.s_id = nn.Parameter(-1.05 * torch.ones(1))    
 
@@ -60,7 +50,15 @@ class GenericLoss(torch.nn.Module):
     losses = {head: 0 for head in opt.heads}
     vector_loss = 0
     classification_loss = 0
-
+    
+    # Define weights for each loss component
+    if self.opt.know_dist_weight:
+      lambda_class = 1 - self.opt.know_dist_weight  # Weight for classification loss
+      lambda_vector = self.opt.know_dist_weight  # Weight for vector loss
+    else:
+      lambda_class = 1
+      lambda_vector = 0     
+    
     for s in range(opt.num_stacks):
       output = outputs[s]
       output = self._sigmoid_output(output)
@@ -100,44 +98,19 @@ class GenericLoss(torch.nn.Module):
           batch['ind'], batch['nuscenes_att']) / opt.num_stacks
  
       if 'embedding' in self.opt.heads:
-          id_head = _tranpose_and_gather_feat(output['embedding'], batch['ind'])
-          id_head = id_head[batch['ids_mask'] > 0].contiguous()
-          id_head = self.emb_scale * F.normalize(id_head)       
-          id_target = batch['ids'][batch['ids_mask'] > 0]
-          id_output = self.classifier(id_head).contiguous()
-          
-          if self.opt.know_dist_weight:
-            vector_target = batch['vectors'][batch['ids_mask'] > 0]  
-            vector_target = vector_target.view(-1, opt.embedding_dim)              
-            vector_loss += self.mse_loss(id_head, vector_target)
-          
-          # Define weights for each loss component
-          if self.opt.know_dist_weight:
-            lambda_class = 1 - self.opt.know_dist_weight  # Weight for classification loss
-            lambda_vector = self.opt.know_dist_weight  # Weight for vector loss
-          else:
-            lambda_class = 1
-            lambda_vector = 0  
-                   
-          if self.opt.embedding_loss == 'focal':
-              id_target_one_hot = id_output.new_zeros((id_head.size(0), self.nID)).scatter_(1,
-                                                                                            id_target.long().view(
-                                                                                                -1, 1), 1)
-              classification_loss += sigmoid_focal_loss_jit(id_output, id_target_one_hot,
-                                                alpha=0.25, gamma=2.0, reduction="sum"
-                                                ) / id_output.size(0)
-              # Compute weighted sum of losses
-              losses['embedding'] = lambda_class * classification_loss + lambda_vector * vector_loss 
-          else:
-              classification_loss += self.IDLoss(id_output, id_target)            
-              # Compute weighted sum of losses
-              losses['embedding'] = lambda_class * classification_loss + lambda_vector * vector_loss
+        if lambda_class:
+          classification_loss += self.IDLoss(output['embedding'], batch['tid_mask'], batch['ind'], batch['tid']) / opt.num_stacks
+          #print('Classification loss: ', classification_loss)
+        if lambda_vector:
+          vector_loss += self.crit_vector(
+            output['embedding'], batch['vectors_mask'], batch['ind'], batch['vectors']) / opt.num_stacks
+          #print('Vector loss: ', vector_loss)
+        losses['embedding'] = lambda_class * classification_loss + lambda_vector * vector_loss       
         
       losses['tot'] = 0
       for head in opt.heads:
         if 'embedding' != head:
           losses['tot'] += opt.weights[head] * losses[head]
-
       
       if 'embedding' in self.opt.heads:
         if opt.multi_loss == 'uncertainty':

@@ -245,7 +245,7 @@ class GenericDataset(data.Dataset):
 
         track_ids.append(ann['track_id'] if 'track_id' in ann else -1)
         if self.opt.know_dist_weight:
-          embedding_vectors.append(ann['embedding'] if 'embedding' in ann else np.zeros(self.opt.embedding_dim, dtype=np.float32))
+          embedding_vectors.append(ann['embedding'])
         if reutrn_hm:
           draw_umich_gaussian(pre_hm[0], ct_int, radius, k=conf)
 
@@ -348,7 +348,7 @@ class GenericDataset(data.Dataset):
       'reg': 2, 'wh': 2, 'tracking': 2, 'ltrb': 4, 'ltrb_amodal': 4, 
       'nuscenes_att': 8, 'velocity': 3, 'hps': self.num_joints * 2, 
       'dep': 1, 'dim': 3, 'amodel_offset': 2}
-
+    
     for head in regression_head_dims:
       if head in self.opt.heads:
         ret[head] = np.zeros(
@@ -356,16 +356,17 @@ class GenericDataset(data.Dataset):
         ret[head + '_mask'] = np.zeros(
           (max_objs, regression_head_dims[head]), dtype=np.float32)
         gt_det[head] = []
-
+  
     if 'embedding' in self.opt.heads:
-      ret['ids'] = np.zeros((max_objs, ), dtype=np.int64)
-      ret['ids_mask'] = np.zeros((max_objs, ), dtype=np.float32)
-      gt_det['ids'] = []  
-      if self.opt.know_dist_weight:
-        ret['vectors'] = np.zeros((max_objs, self.opt.embedding_dim), dtype=np.float32)
-        ret['vectors_mask'] = np.zeros((max_objs, ), dtype=np.float32)
-        gt_det['vectors'] = [] 
-
+      ret['tid'] = np.zeros((max_objs), dtype=np.int64)
+      ret['tid_mask'] = np.zeros((max_objs), dtype=np.float32)
+      gt_det['tid'] = []  
+    
+    if self.opt.know_dist_weight:
+      ret['vectors'] = np.zeros((max_objs, self.opt.embedding_dim), dtype=np.float32)
+      ret['vectors_mask'] = np.zeros((max_objs), dtype=np.float32)
+      gt_det['vectors'] = [] 
+    
     if 'hm_hp' in self.opt.heads:
       num_joints = self.num_joints
       ret['hm_hp'] = np.zeros(
@@ -475,19 +476,20 @@ class GenericDataset(data.Dataset):
         gt_det['tracking'].append(np.zeros(2, np.float32))
 
     if 'embedding' in self.opt.heads:
-        if ann['track_id'] in track_ids:
-            ret['ids_mask'][k] = 1
-            ret['ids'][k] = ann['track_id'] 
-            gt_det['ids'].append(ret['ids'][k] )
+      if ann['track_id'] in track_ids:
+        ret['tid_mask'][k] = 1
+        ret['tid'][k] = ann['track_id'] 
+        gt_det['tid'].append(ret['tid'][k])
+      else:
+        gt_det['tid'].append(np.array(-1,dtype=np.int64))
+          
+      if self.opt.know_dist_weight:
+        if ann['embedding'] in embedding_vectors:
+          ret['vectors_mask'][k] = 1
+          ret['vectors'][k] = ann['embedding']
+          gt_det['vectors'].append(ret['vectors'][k])
         else:
-            gt_det['ids'].append(np.array(-1,dtype=np.int64))
-            
-        if self.opt.know_dist_weight:
-            if ann['embedding'] in embedding_vectors:
-                ret['vectors'][k] = ann['embedding']
-                gt_det['vectors'].append(ret['vectors'][k])
-            else:
-                gt_det['vectors'].append(np.zeros(self.opt.embedding_dim, dtype=np.float32))    
+          gt_det['vectors'].append(np.zeros(self.opt.embedding_dim, dtype=np.float32))    
         
     if 'ltrb' in self.opt.heads:
       ret['ltrb'][k] = bbox[0] - ct_int[0], bbox[1] - ct_int[1], \
@@ -620,9 +622,9 @@ class GenericDataset(data.Dataset):
                 'pre_cts': np.array([[0, 0]], dtype=np.float32),
                 'tracking': np.array([[0, 0]], dtype=np.float32),
                 'bboxes_amodal': np.array([[0, 0]], dtype=np.float32),
-                'hps': np.zeros((1, 17, 2), dtype=np.float32),}
-      if self.opt.know_dist_weight:
-        gt_det['vectors'] = np.zeros(self.opt.embedding_dim, dtype=np.float32)
+                'hps': np.zeros((1, 17, 2), dtype=np.float32),
+                'tid': np.array([-1], dtype=np.int64),
+                'vectors': np.zeros((1, self.opt.embedding_dim), dtype=np.float32),}
     gt_det = {k: np.array(gt_det[k], dtype=np.float32) for k in gt_det}
     return gt_det
 

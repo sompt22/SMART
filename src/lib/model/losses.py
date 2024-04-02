@@ -13,6 +13,8 @@ import torch.nn as nn
 from .utils import _tranpose_and_gather_feat, _nms, _topk
 import torch.nn.functional as F
 from utils.image import draw_umich_gaussian
+from fvcore.nn import sigmoid_focal_loss_jit
+import math
 
 def _slow_neg_loss(pred, gt):
   '''focal loss from CornerNet'''
@@ -322,3 +324,80 @@ class TripletLoss(nn.Module):
         if self.mutual:
             return loss, dist
         return loss
+
+
+class EmbeddingLoss(nn.Module):
+    def __init__(self, opt):
+        super(EmbeddingLoss, self).__init__()
+        self.nID = opt.nID
+        self.emb_scale = math.sqrt(2) * math.log(self.nID - 1)
+        self.emb_dim = opt.embedding_dim
+        self.classifier = nn.Linear(self.emb_dim, self.nID)
+        if opt.embedding_loss == 'focal':
+            torch.nn.init.normal_(self.classifier.weight, std=0.01)
+            prior_prob = 0.01
+            bias_value = -math.log((1 - prior_prob) / prior_prob)
+            torch.nn.init.constant_(self.classifier.bias, bias_value)
+        self.opt = opt
+        self.IDLoss = nn.CrossEntropyLoss(ignore_index=-1)
+
+    def forward(self, output, mask, ind, target):
+        # Gather the embeddings for the specified indices and apply the mask
+        id_head = _tranpose_and_gather_feat(output, ind)  # Assuming output is directly passed
+        id_head = id_head[mask > 0].contiguous()
+        id_head = self.emb_scale * F.normalize(id_head, dim=1)
+
+        # Gather the target IDs for the masked positions
+        id_target = target[mask > 0]
+
+        # Compute the classification output using the classifier
+        id_output = self.classifier(id_head).contiguous()
+            
+        # Compute the classification loss
+        if self.opt.embedding_loss == 'focal':
+            # Assuming `sigmoid_focal_loss_jit` function is defined elsewhere
+            id_target_one_hot = id_output.new_zeros((id_head.size(0), self.nID)).scatter_(
+                1, id_target.long().view(-1, 1), 1)
+            classification_loss = sigmoid_focal_loss_jit(
+                id_output, id_target_one_hot, alpha=0.25, gamma=2.0, reduction="sum"
+            ) / id_output.size(0)
+        else:
+            classification_loss = self.IDLoss(id_output, id_target)
+        return classification_loss
+
+class EmbeddingVectorLoss(nn.Module):
+    def __init__(self, opt):
+        super(EmbeddingVectorLoss, self).__init__()
+        self.mse_loss = nn.MSELoss()
+        self.opt = opt
+        self.emb_scale = math.sqrt(2) * math.log(self.opt.nID - 1)
+
+    def forward(self, output, mask, ind, target):
+        vector_head = _tranpose_and_gather_feat(output, ind)
+        vector_head_masked = vector_head[mask > 0].contiguous() 
+        vector_head_normalized = self.emb_scale * F.normalize(vector_head_masked, dim=1) 
+        if vector_head_normalized.numel() > 0:            
+          # Reshape the target to match the embeddings dimension if necessary
+          # It's assumed target is equivalent to 'batch['vectors']' and already
+          # filtered by 'batch['vectors_mask'] > 0'
+          vector_target = target[mask > 0].contiguous()      
+          # Calculate MSE Loss     
+          vector_loss = self.mse_loss(vector_head_masked, vector_target)
+          if self.opt.debug == 4:
+            print("vector head shape: \n", vector_head.shape)
+            print("vector head masked shape: \n", vector_head_masked.shape)
+            print("vector head normalized shape: \n", vector_head_normalized.shape)
+            print("vector head normalized min max: \n", vector_head_normalized.min(), vector_head_normalized.max()) 
+            print("vector target shape: \n", vector_target.shape)
+            print("vector target min max: \n", vector_target.min(), vector_target.max())
+        else:
+          vector_loss = torch.tensor(0.0).to(vector_head_normalized.device) 
+          if self.opt.debug == 4:
+            print("vector head shape: \n", vector_head.shape)
+            print("vector head masked shape: \n", vector_head_masked.shape)
+            print("vector head normalized shape: \n", vector_head_normalized.shape)
+            print("mask shape: \n", mask.shape)
+            print("output shape: \n", output.shape)
+            print("ind shape: \n", ind.shape)
+            print("vector head empty! \n")       
+        return vector_loss
