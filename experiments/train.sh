@@ -26,7 +26,7 @@ set_batch_size() {
       batch_size=16
       ;;
     "RTX4090")
-      batch_size=8
+      batch_size=16
       ;;
     "GTX1080Ti")
       batch_size=8
@@ -39,8 +39,8 @@ set_batch_size() {
 }
 
 # Check if all required parameters are provided
-if [ "$#" -ne 7 ]; then
-  echo "Usage: $0 <dataset> <num_epochs> <lr_step> <lr> <task> <kd> <premodel>"
+if [ "$#" -ne 9 ]; then
+  echo "Usage: $0 <dataset> <num_epochs> <lr_step> <lr> <task> <kd> <loss> <optim> <premodel>"
   exit 1
 fi
 
@@ -51,12 +51,14 @@ lr_step="$3"
 lr="$4"
 task="$5"
 kd="$6"
-premodel="$7"
+loss="$7"
+optim="$8"
+premodel="$9"
 
 # Get the GPU model
 gpu_model=$(get_gpu_model 0)  # Assuming only one GPU
 set_batch_size "$gpu_model"
-exp_name="${dataset}_${gpu_model}_epochs_${num_epochs}_lrstep_${lr_step}_lr_${lr}_bs_${batch_size}_task_${task}_kd_${kd}"
+exp_name="${dataset}_${gpu_model}_epochs_${num_epochs}_lrstep_${lr_step}_lr_${lr}_bs_${batch_size}_kd_${kd}_loss_${loss}_optim_${optim}"
 
 
 echo "Training on GPU: $gpu_model"
@@ -78,7 +80,7 @@ python main.py "$task" \
                           "ltrb_amodal":  true,
                           "embedding":    false,
                           "tracking":     true}' \
-    --optim adamw \
+    --optim "$optim" \
     --know_dist_weight "$kd" \
     --same_aug \
     --ltrb_amodal \
@@ -93,9 +95,9 @@ python main.py "$task" \
     --gpus 0 \
     --batch_size "$batch_size" \
     --lr "$lr" \
-    --num_workers 8 \
+    --num_workers 10 \
     --num_classes 1 \
-    --embedding_loss focal \
+    --embedding_loss "$loss" \
     --multi_loss uncertainty \
     --load_model "$premodel"
 cd ..

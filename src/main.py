@@ -24,7 +24,14 @@ def set_requires_grad(nets, requires_grad=False):
       for param in net.parameters():
         param.requires_grad = requires_grad
 
-def initialize_and_freeze_model_components(opt, model):
+def set_bn_eval(module):
+    """Recursively set batch normalization layers to evaluation mode."""
+    if isinstance(module, torch.nn.modules.batchnorm._BatchNorm):
+        module.eval()
+    for child in module.children():
+        set_bn_eval(child)
+        
+def initialize_and_freeze_model_components_withbn(opt, model):
     # Freezing base network (if considered as backbone)
     if 'base' in opt.freeze_components and opt.freeze_components['base']:
         set_requires_grad(model.base, requires_grad=False)
@@ -39,6 +46,26 @@ def initialize_and_freeze_model_components(opt, model):
     if 'ida_up' in opt.freeze_components and opt.freeze_components['ida_up']:
         set_requires_grad(model.ida_up, requires_grad=False)
 
+    return model        
+
+def initialize_and_freeze_model_components(opt, model):
+    # Assuming the model is in training mode by default: model.train()
+    
+    # Freezing base network (if considered as backbone)
+    if 'base' in opt.freeze_components and opt.freeze_components['base']:
+        set_requires_grad(model.base, requires_grad=False)
+        set_bn_eval(model.base)  # Optionally freeze BN stats in this part
+        print("Base model frozen! \n")
+        
+    # Freezing task-specific heads and other components
+    for component_name in ['hm', 'reg', 'wh', 'embedding', 'tracking', 'ltrb_amodal', 'dla_up', 'ida_up']:
+        if component_name in opt.freeze_components and opt.freeze_components[component_name]:
+            component = getattr(model, component_name, None)
+            if component:
+                set_requires_grad(component, requires_grad=False)
+                set_bn_eval(component)  # Optionally freeze BN stats in these parts
+                print(f"{component} frozen! \n")
+                
     return model
 
 def get_optimizer(opt, parameters):
