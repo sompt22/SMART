@@ -26,7 +26,7 @@ set_batch_size() {
       batch_size=16
       ;;
     "RTX4090")
-      batch_size=16
+      batch_size=8
       ;;
     "GTX1080Ti")
       batch_size=8
@@ -71,15 +71,15 @@ cd src
 python main.py "$task" \
     --exp_id "$exp_name" \
     --dataset "$dataset" \
-    --freeze_components '{"base":         true,
-                          "dla_up":       true,
-                          "ida_up":       true,
-                          "hm":           true,
-                          "reg":          true,
-                          "wh":           true,
-                          "ltrb_amodal":  true,
+    --freeze_components '{"base":         false,
+                          "dla_up":       false,
+                          "ida_up":       false,
+                          "hm":           false,
+                          "reg":          false,
+                          "wh":           false,
+                          "ltrb_amodal":  false,
                           "embedding":    false,
-                          "tracking":     true}' \
+                          "tracking":     false}' \
     --optim "$optim" \
     --know_dist_weight "$kd" \
     --same_aug \
