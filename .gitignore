@@ -1,4 +1,5 @@
 exp/**/exp**
+exp/**/inference**
 videos/
 .vscode/*
 *.zip
