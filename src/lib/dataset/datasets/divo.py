@@ -59,10 +59,6 @@ class DIVO(GenericDataset):
         result = results[image_info['id']]
         frame_id = image_info['frame_id']
         for item in result:
-          if not ('tracking_id' in item):
-            item['tracking_id'] = np.random.randint(100000)
-          if item['active'] == 0:
-            continue
           tracking_id = item['tracking_id']
           bbox = item['bbox']
           bbox = [bbox[0], bbox[1], bbox[2], bbox[3]]

@@ -263,11 +263,11 @@ class Detector(object):
 
     output_inds = []
     for det in dets:
-      if det['score'] < self.opt.pre_thresh or det['active'] == 0:
+      if det.score < self.opt.pre_thresh or det.active == 0:
         continue
-      bbox = self._trans_bbox(det['bbox'], trans_input, inp_width, inp_height)
+      bbox = self._trans_bbox(det.bbox, trans_input, inp_width, inp_height)
       bbox_out = self._trans_bbox(
-        det['bbox'], trans_output, out_width, out_height)
+        det.bbox, trans_output, out_width, out_height)
       h, w = bbox[3] - bbox[1], bbox[2] - bbox[0]
       if (h > 0 and w > 0):
         radius = gaussian_radius((math.ceil(h), math.ceil(w)))

@@ -10,7 +10,7 @@ import os
 from collections import defaultdict
 from ..generic_dataset import GenericDataset
 
-class SOMPT22(GenericDataset):
+class SOMPT22_TRAIN_PAPER(GenericDataset):
   num_classes = 1
   num_categories = 1
   default_resolution = [544, 960]
@@ -19,9 +19,9 @@ class SOMPT22(GenericDataset):
   cat_ids = {1: 1, -1: -1}
   def __init__(self, opt, split):
 
-    print('Using SOMPT22 {}'.format(split))
+    print('Using SOMPT22_TRAIN_PAPER {}'.format(split))
 
-    data_dir = os.path.join(opt.data_dir, 'sompt22')
+    data_dir = os.path.join(opt.data_dir, 'sompt22-train-paper')
     
     ann_file = f'{split}.json'
 
@@ -31,10 +31,10 @@ class SOMPT22(GenericDataset):
 
     self.images = None
     # load image list and coco
-    super(SOMPT22, self).__init__(opt, split, ann_path, img_dir)
+    super(SOMPT22_TRAIN_PAPER, self).__init__(opt, split, ann_path, img_dir)
 
     self.num_samples = len(self.images)
-    print('Loaded SOMPT22 {} {} samples'.format(split, self.num_samples))
+    print('Loaded SOMPT22_TRAIN_PAPER {} {} samples'.format(split, self.num_samples))
 
   def _to_float(self, x):
     return float("{:.2f}".format(x))
@@ -43,7 +43,7 @@ class SOMPT22(GenericDataset):
     return self.num_samples
 
   def save_results(self, results, save_dir):
-    results_dir = os.path.join(save_dir, 'results_sompt22')
+    results_dir = os.path.join(save_dir, 'results_sompt22_train_paper')
     if not os.path.exists(results_dir):
       os.mkdir(results_dir)
     for video in self.coco.dataset['videos']:

@@ -19,9 +19,9 @@ class Track(object):
         self.embedding = initial_embedding if initial_embedding is not None else None
         self.embeddings_history = [] if initial_embedding is None else [initial_embedding]
         self.age = 0
-        self.active = True
+        self.active = 1
         self.is_on_probation = True
-        self.probation_frames = 5  # Number of frames to wait before activating the track   
+        self.probation_frames = 1  # Number of frames to wait before activating the track   
         self.max_age = max_age  # Tracks are considered inactive if not updated for this many frames  
         self.smoothing_window = smoothing_window  # Number of embeddings to consider for smoothing    
            
@@ -57,7 +57,7 @@ class Track(object):
         """Increment the track's age, potentially deactivating it if it gets too old."""
         self.age += 1
         if self.age > self.max_age:
-            self.active = False
+            self.active = 0
                 
     def smooth_fcn(self, history, new_value):
         """Smooth the current vector based on the history."""

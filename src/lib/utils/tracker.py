@@ -166,7 +166,7 @@ class Tracker:
                 #ret.append(unmatched_track)   
             else: 
                 if self.opt.debug == 4: self.oper.write(f"Track {track.track_id} removed. \n")
-                self.tracks.remove(track)                   
+                #self.tracks.remove(track)                   
         self.frm_count += 1                                                             
         return ret
 
