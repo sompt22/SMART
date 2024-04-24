@@ -5,5 +5,13 @@ model_path=$(realpath $1)
 
 
 cd src
-python test.py tracking,embedding --exp_id sompt22-test-prob1 --dataset sompt22 --trainval --pre_hm --ltrb_amodal --track_thresh 0.4 --pre_thresh 0.5 --load_model $model_path --num_classes 1
+python test.py tracking,embedding --exp_id sompt22-train-paper-noprehm \
+                                  --dataset sompt22-train-paper \
+                                  --trainval \
+                                  --ltrb_amodal \
+                                  --max_age 15 \
+                                  --track_thresh 0.4 \
+                                  --pre_thresh 0.5 \
+                                  --load_model $model_path \
+                                  --num_classes 1
 cd ..

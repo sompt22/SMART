@@ -9,12 +9,25 @@ debug=$4
 
 echo "$video_path"
 echo "$model_path"
+echo FATIH
+# Use sed to extract the required path
+model_path_=$(echo "$model_path" | sed -n "s|.*/${task}/[^/]*/\(.*\)/model_last.pth.*|\1|p" | sed 's|/logs_|_logs_|')
+echo "$model_path_"
+echo EMRE
 
-_experiment_name=$(basename "$video_path" | cut -f1 -d'.')
-experiment_name='inference_'$_experiment_name
+video_path_=$(basename "$video_path" | cut -f1 -d'.')
+experiment_name="inference_${video_path_}_${model_path_}"
 printf "experiment_name: $experiment_name\n"
 
 cd src
 # infer --motchallenge saves inference results
-python demo.py $task --exp_id $experiment_name --ltrb_amodal --max_age 100 --debug $debug --load_model $model_path --num_classes 1 --demo $video_path 
+python demo.py $task --exp_id $experiment_name \
+                     --ltrb_amodal \
+                     --max_age 15 \
+                     --debug $debug \
+                     --load_model $model_path \
+                     --track_thresh 0.4 \
+                     --pre_thresh 0.5 \
+                     --num_classes 1 \
+                     --demo $video_path 
 cd ..
