@@ -19,6 +19,8 @@ from .datasets.sompt22 import SOMPT22
 from .datasets.sompt22_train_sim import SOMPT22_TRAIN_SIM
 from .datasets.sompt22_train_sim_noocc import SOMPT22_TRAIN_SIM_NOOCC
 from .datasets.sompt22_train_paper import SOMPT22_TRAIN_PAPER
+from .datasets.sompt22_train_10secs_occlusion import SOMPT22_TRAIN_10SECS_OCCLUSION
+from .datasets.sompt22_train_10secs_clear import SOMPT22_TRAIN_10SECS_CLEAR
 
 dataset_factory = {
   'custom': CustomDataset,
@@ -32,6 +34,8 @@ dataset_factory = {
   'sompt22-train-sim': SOMPT22_TRAIN_SIM,
   'sompt22-train-sim-noocc': SOMPT22_TRAIN_SIM_NOOCC,
   'sompt22-train-paper': SOMPT22_TRAIN_PAPER,
+  'sompt22-train-10secs-occlusion': SOMPT22_TRAIN_10SECS_OCCLUSION,
+  'sompt22-train-10secs-clear': SOMPT22_TRAIN_10SECS_CLEAR
 }
 
 

@@ -5,8 +5,8 @@ model_path=$(realpath $1)
 
 
 cd src
-python test.py tracking,embedding --exp_id sompt22-train-paper-noprehm \
-                                  --dataset sompt22-train-paper \
+python test.py tracking,embedding --exp_id sompt22-train-10secs-occlusion-noprehm \
+                                  --dataset sompt22-train-10secs-occlusion \
                                   --trainval \
                                   --ltrb_amodal \
                                   --max_age 15 \
