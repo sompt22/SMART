@@ -143,6 +143,8 @@ class Tracker:
                 self.create_new_track(detections[i])              
 
         for i in unmatched_tracks:
+            if i >= len(self.tracks):
+                continue
             track = self.tracks[i]
             if self.opt.debug == 4: self.oper.write(f"Unmatched Track: {track.track_id} \n")         
             if track.age < self.max_age:
@@ -166,7 +168,7 @@ class Tracker:
                 #ret.append(unmatched_track)   
             else: 
                 if self.opt.debug == 4: self.oper.write(f"Track {track.track_id} removed. \n")
-                #self.tracks.remove(track)                   
+                self.tracks.remove(track)                   
         self.frm_count += 1                                                             
         return ret
 
