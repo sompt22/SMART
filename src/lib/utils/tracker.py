@@ -14,7 +14,7 @@ class Tracker:
         self.tracks = []
         self.next_track_id = 0
         self.max_age = self.opt.max_age  # Tracks are considered inactive if not updated for this many frames
-        self.smoothing_window = 10 
+        self.smoothing_window = 20 
         self.tracking_task  = True if 'tracking' in self.opt.task else False
         self.embedding_task = True if 'embedding' in self.opt.task else False
         if self.opt.debug == 4: self.initialize_files() 

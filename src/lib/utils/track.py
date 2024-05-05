@@ -50,7 +50,7 @@ class Track(object):
             if self.probation_frames <= 0:
                 self.is_on_probation = False
                 # Additional logic to "confirm" the track can be placed here
-                print(f"Track {self.track_id} exiting probation after confirmation.")        
+                #print(f"Track {self.track_id} exiting probation after confirmation.")        
         
     
     def increment_age(self):
