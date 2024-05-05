@@ -13,7 +13,7 @@ class Track(object):
         self.score = initial_score
         self.class_id = initial_class
         self.center = initial_ct
-        self.center_disp_history = np.array((0,0))
+        self.center_disp_history = [(0,0)]
         self.tracking = initial_tracking  if initial_tracking is not None else None
         self.tracking_history = [] if initial_tracking is None else [initial_tracking]
         self.embedding = initial_embedding if initial_embedding is not None else None
@@ -24,8 +24,7 @@ class Track(object):
         self.probation_frames = 1  # Number of frames to wait before activating the track   
         self.max_age = max_age  # Tracks are considered inactive if not updated for this many frames  
         self.smoothing_window = smoothing_window  # Number of embeddings to consider for smoothing    
-           
-    
+            
     def update(self, new_bbox=None, new_score=None, new_class=None, new_ct=None, new_tracking=None, new_embedding=None, decrement_probation=True):              
         """Update the track with new data."""
         if new_bbox is not None:
@@ -35,7 +34,8 @@ class Track(object):
         if new_class is not None:
             self.class_id = new_class
         if new_ct is not None: 
-            self.center_disp_history = self.center_distance(new_ct)           
+            print(f" Fatih Track {self.track_id} center: {self.center} -> {new_ct}")
+            self.center_distance(new_ct)    
             self.center = new_ct               
         if new_tracking is not None:
             #self.tracking = self.smooth_fcn(self.tracking_history, new_tracking)
@@ -51,8 +51,12 @@ class Track(object):
                 self.is_on_probation = False
                 # Additional logic to "confirm" the track can be placed here
                 #print(f"Track {self.track_id} exiting probation after confirmation.")        
-        
     
+    def unmatched_update(self):              
+        """Update the track with new data."""
+        self.increment_age()
+        self.center_distance(self.center)                  
+        
     def increment_age(self):
         """Increment the track's age, potentially deactivating it if it gets too old."""
         self.age += 1
@@ -70,5 +74,7 @@ class Track(object):
    
     def center_distance(self, new_center):
         """Calculate the distance between the track's center and a new center."""
-        return np.array(self.center) - np.array(new_center)
+        print(f"center: {self.center} new_center: {new_center}")
+        disp = np.array(new_center) - np.array(self.center)
+        return self.smooth_fcn(self.center_disp_history, disp)
                    

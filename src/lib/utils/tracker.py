@@ -75,15 +75,23 @@ class Tracker:
         if self.opt.debug == 4:
             self.oper.write(f"Least Square Error (LSE) Matrix: {lse_dist.shape} (Detections x Tracks)" + "\n")
             self.oper.write(str(lse_dist) + "\n")
+        if self.opt.debug == 3:
+            print(f"Least Square Error (LSE) Matrix: {lse_dist.shape} (Detections x Tracks)")
+            print(str(lse_dist))
         
         ## Gating for box size
         invalid = ((lse_dist > track_size.reshape(1, M)) + (lse_dist > item_size.reshape(N, 1)) + (item_cat.reshape(N, 1) != track_cat.reshape(1, M))) > 0
         lse_dist = lse_dist + invalid * 1e18 
         if self.opt.debug == 4:
-            self.oper.write(f"Invalid Matrix: {invalid.shape} (Detections x Tracks)" + "\n")
+            self.oper.write(f"Invalid Matrix: {invalid.shape} (Detections x Tracks)")
             self.oper.write(str(invalid)+ "\n") 
-            self.oper.write("Gated Least Square Error (LSE) Matrix: \n")
-            self.oper.write(str(lse_dist) + "\n")       
+            self.oper.write("Gated Least Square Error (LSE) Matrix:")
+            self.oper.write(str(lse_dist))
+        if self.opt.debug == 3:
+            print(f"Invalid Matrix: {invalid.shape} (Detections x Tracks)")
+            print(str(invalid)) 
+            print("Gated Least Square Error (LSE) Matrix:")
+            print(str(lse_dist))       
         
         if self.embedding_task:
             dets_emb = np.asarray([det['embedding'] for det in detections], np.float32)      # N x embedding_dim
@@ -95,7 +103,12 @@ class Tracker:
                 self.oper.write("Cosine Similarity Matrix: \n")
                 self.oper.write(str(cos_sim) + "\n")
                 self.oper.write("Gated Cosine Similarity Matrix: \n")
-                self.oper.write(str(gated_cos_sim) + "\n")                            
+                self.oper.write(str(gated_cos_sim) + "\n")    
+            if self.opt.debug == 3:
+                print("Cosine Similarity Matrix:")
+                print(str(cos_sim))
+                print("Gated Cosine Similarity Matrix:")
+                print(str(gated_cos_sim))                        
         else:    
             if self.opt.hungarian:
                 item_score = np.array([item['score'] for item in results], np.float32) # N
@@ -110,6 +123,11 @@ class Tracker:
             self.oper.write(str(matched_indices) + "\n")
             self.oper.write("Unmatched Detections: " + str(unmatched_dets) + "\n")
             self.oper.write("Unmatched Tracks: " + str(unmatched_tracks) + "\n") 
+        if self.opt.debug == 3:
+            print("Matched Indices:")
+            print(str(matched_indices))
+            print("Unmatched Detections: " + str(unmatched_dets))
+            print("Unmatched Tracks: " + str(unmatched_tracks))
 
         ret = []
         for m in matched_indices:
@@ -134,11 +152,15 @@ class Tracker:
                 if self.embedding_task: matched_track['embedding'] = track.embedding 
                 ret.append(matched_track)
                 if self.opt.debug == 4: self.oper.write(f"Track {track.track_id} matched! \n")
+                if self.opt.debug == 3: print(f"Track {track.track_id} matched!")
             if self.opt.debug == 4 and temp_age != track.age:
                 self.oper.write(f"Track {track.track_id} age (Disappeared): {temp_age}  \n")
-       
+            if self.opt.debug == 3 and temp_age != track.age:
+                print(f"Track {track.track_id} age (Disappeared): {temp_age}")
+                
         for i in unmatched_dets:
             if self.opt.debug == 4: self.oper.write(f"Unmatched Detection and Score: {i},  {detections[i]['score']} \n")
+            if self.opt.debug == 3: print(f"Unmatched Detection and Score: {i},  {detections[i]['score']}")
             if detections[i]['score'] > self.opt.new_thresh:
                 self.create_new_track(detections[i])              
 
@@ -146,18 +168,10 @@ class Tracker:
             if i >= len(self.tracks):
                 continue
             track = self.tracks[i]
-            if self.opt.debug == 4: self.oper.write(f"Unmatched Track: {track.track_id} \n")         
+            if self.opt.debug == 4: self.oper.write(f"Unmatched Track: {track.track_id} \n") 
+            if self.opt.debug == 3: print(f"Unmatched Track: {track.track_id}")        
             if track.age < self.max_age:
-                track.increment_age()
-                bbox = track.bbox
-                ct = track.center
-                v = [0,0] #track.tracking if self.tracking_task else track.center_disp_history
-                new_bbox = [
-                bbox[0] + v[0], bbox[1] + v[1],
-                bbox[2] + v[0], bbox[3] + v[1]]
-                new_center = [ct[0] + v[0], ct[1] + v[1]]
-                track.center = new_center
-                track.bbox = new_bbox                   
+                track.unmatched_update()            
                 unmatched_track = {'tracking_id': track.track_id, \
                                 'bbox': track.bbox, \
                                 'ct': track.center, \
@@ -165,9 +179,10 @@ class Tracker:
                                 'class': track.class_id}
                 if self.tracking_task: unmatched_track['tracking'] = track.tracking 
                 if self.embedding_task: unmatched_track['embedding'] = track.embedding                   
-                #ret.append(unmatched_track)   
+                ret.append(unmatched_track)   
             else: 
                 if self.opt.debug == 4: self.oper.write(f"Track {track.track_id} removed. \n")
+                if self.opt.debug == 3: print(f"Track {track.track_id} removed.")
                 self.tracks.remove(track)                   
         self.frm_count += 1                                                             
         return ret
