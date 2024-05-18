@@ -50,6 +50,13 @@ class PrefetchDataset(torch.utils.data.Dataset):
   def __len__(self):
     return len(self.images)
 
+def numpy_to_list(obj):
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()  # Convert ndarray to list
+    elif isinstance(obj, np.generic):
+        return obj.item()  # Convert numpy scalars to Python scalars
+    raise TypeError(f'Object of type {obj.__class__.__name__} is not JSON serializable')
+
 def prefetch_test(opt):
   if not opt.not_set_cuda_env:
     os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpus_str
@@ -84,6 +91,11 @@ def prefetch_test(opt):
     for img_id in data_loader.dataset.images:
       results[img_id] = load_results['{}'.format(img_id)]
     num_iters = 0
+    
+  associationFile = os.path.join(opt.save_dir, 'association.json')
+  association = open(associationFile, 'a')
+  data = {"Sequences": []
+          }
   for ind, (img_id, pre_processed_images) in enumerate(data_loader):
     if ind >= num_iters:
       break
@@ -98,6 +110,9 @@ def prefetch_test(opt):
         pre_processed_images['meta']['pre_dets'] = []
       detector.reset_tracking()
       print('Start tracking video', int(pre_processed_images['video_id']))
+      sequence_data = {"SequenceID": int(pre_processed_images['video_id']),
+                    "Tracks": []}
+      print('video_id', int(pre_processed_images['video_id']))
     if opt.public_det:
       if '{}'.format(int(img_id.numpy().astype(np.int32)[0])) in load_results:
         pre_processed_images['meta']['cur_dets'] = \
@@ -107,6 +122,10 @@ def prefetch_test(opt):
         pre_processed_images['meta']['cur_dets'] = []
     
     ret = detector.run(pre_processed_images)
+    #print('img_id EMRE', img_id.numpy().astype(np.int32)[0])
+    #print('results FATIH', ret['results'])
+    ret['results'].append({"frame_id": int(img_id.numpy().astype(np.int32)[0])})
+    sequence_data["Tracks"].append(ret['results'])
     results[int(img_id.numpy().astype(np.int32)[0])] = ret['results']
     
     Bar.suffix = '[{0}/{1}]|Tot: {total:} |ETA: {eta:} '.format(
@@ -120,6 +139,8 @@ def prefetch_test(opt):
         print('{}/{}| {}'.format(opt.task, opt.exp_id, Bar.suffix))
     else:
       bar.next()
+    data["Sequences"].append(sequence_data)
+  association.write(json.dumps(data, default=numpy_to_list))
   bar.finish()
   if opt.save_results:
     print('saving results to', opt.save_dir + '/save_results_{}{}.json'.format(

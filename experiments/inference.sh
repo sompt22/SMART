@@ -23,7 +23,7 @@ cd src
 # infer --motchallenge saves inference results
 python demo.py $task --exp_id $experiment_name \
                      --ltrb_amodal \
-                     --max_age 50 \
+                     --max_age 150 \
                      --debug $debug \
                      --load_model $model_path \
                      --track_thresh 0.4 \
