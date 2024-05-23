@@ -5,7 +5,7 @@ model_path=$(realpath $1)
 
 
 cd src
-python test.py tracking,embedding --exp_id sompt22-vector \
+python test.py tracking,embedding --exp_id sompt22-vector_kd1 \
                                   --dataset sompt22 \
                                   --trainval \
                                   --ltrb_amodal \

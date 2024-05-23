@@ -11,6 +11,7 @@ import time
 from progress.bar import Bar
 import torch
 import copy
+import random
 
 from opts import opts
 from logger import Logger
@@ -96,6 +97,7 @@ def prefetch_test(opt):
   association = open(associationFile, 'a')
   data = {"Sequences": []
           }
+  seq_num = 0
   for ind, (img_id, pre_processed_images) in enumerate(data_loader):
     if ind >= num_iters:
       break
@@ -109,10 +111,13 @@ def prefetch_test(opt):
           '. Use empty initialization.')
         pre_processed_images['meta']['pre_dets'] = []
       detector.reset_tracking()
+      if seq_num > 0:
+        data["Sequences"].append(sequence_data)
       print('Start tracking video', int(pre_processed_images['video_id']))
       sequence_data = {"SequenceID": int(pre_processed_images['video_id']),
-                    "Tracks": []}
+                       "Tracks": []}
       print('video_id', int(pre_processed_images['video_id']))
+      seq_num += 1
     if opt.public_det:
       if '{}'.format(int(img_id.numpy().astype(np.int32)[0])) in load_results:
         pre_processed_images['meta']['cur_dets'] = \
@@ -124,8 +129,13 @@ def prefetch_test(opt):
     ret = detector.run(pre_processed_images)
     #print('img_id EMRE', img_id.numpy().astype(np.int32)[0])
     #print('results FATIH', ret['results'])
-    ret['results'].append({"frame_id": int(img_id.numpy().astype(np.int32)[0])})
-    sequence_data["Tracks"].append(ret['results'])
+    res_fati = ret['results'].copy()
+    #print(res_fati)
+    for i in range(len(res_fati)):
+      res_fati[i]['Frame_id'] = int(img_id.numpy().astype(np.int32)[0])
+    sequence_data["Tracks"].append(res_fati)
+    #print('sequence_data', sequence_data['Frame_id'])
+    #print('tracks', sequence_data['Tracks'])
     results[int(img_id.numpy().astype(np.int32)[0])] = ret['results']
     
     Bar.suffix = '[{0}/{1}]|Tot: {total:} |ETA: {eta:} '.format(
@@ -139,8 +149,8 @@ def prefetch_test(opt):
         print('{}/{}| {}'.format(opt.task, opt.exp_id, Bar.suffix))
     else:
       bar.next()
-    data["Sequences"].append(sequence_data)
-  association.write(json.dumps(data, default=numpy_to_list))
+  data["Sequences"].append(sequence_data)
+  association.write(json.dumps(data,default=numpy_to_list))
   bar.finish()
   if opt.save_results:
     print('saving results to', opt.save_dir + '/save_results_{}{}.json'.format(
