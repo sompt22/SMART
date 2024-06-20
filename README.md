@@ -72,6 +72,10 @@ The result for the example images should look like:
 
 You can add `--debug 2` to visualize the heatmap and offset predictions.
 
+## MOT SIMULATION SUITE Presentation
+
+[![Watch the video](readme/mot-simulation-suite-youtube.png)](https://youtu.be/g0KLBdeiFA8?si=fsOR0JkYdv6olxlD)
+
 
 ## Benchmark Evaluation and Training
 
