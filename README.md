@@ -59,13 +59,13 @@ We support demo for videos, webcam, and image folders.
 If you want to test with person tracking models, you need to add `--num_class 1`:
 
 ~~~
-python demo.py tracking --load_model ../models/sompt22.pth --num_class 1 --demo /path/to/image/or/folder/or/video 
+python demo.py tracking,embedding --load_model ../models/sompt22.pth --num_class 1 --demo /path/to/image/or/folder/or/video 
 ~~~
 
 For webcam demo, run     
 
 ~~~
-python demo.py tracking --load_model ../models/sompt22.pth --num_class 1 --demo webcam 
+python demo.py tracking,embedding --load_model ../models/sompt22.pth --num_class 1 --demo webcam 
 ~~~
 
 The result for the example images should look like:
@@ -79,5 +79,5 @@ After [installation](readme/INSTALL.md), follow the instructions in [DATA.md](re
 
 ## License
 
-SMaRT is developed upon [CenterNet](https://github.com/xingyizhou/CenterNet) and [CenterTrack](https://github.com/xingyizhou/CenterTrack). Both codebases are released under MIT License themselves. Some code of CenterNet are from third-parties with different licenses, please check the CenterNet repo for details. In addition, this repo uses [py-motmetrics](https://github.com/cheind/py-motmetrics) for MOT evaluation and [nuscenes-devkit](https://github.com/nutonomy/nuscenes-devkit) for nuScenes evaluation and preprocessing. See [NOTICE](NOTICE) for detail. Please note the licenses of each dataset. Most of the datasets we used in this project are under non-commercial licenses.
+SMaRT is developed upon [CenterNet](https://github.com/xingyizhou/CenterNet) and [CenterTrack](https://github.com/xingyizhou/CenterTrack). Both codebases are released under MIT License themselves. Some code of CenterNet are from third-parties with different licenses, please check the CenterNet repo for details. In addition, this repo uses [TrackEval](https://github.com/JonathonLuiten/TrackEval.git) for MOT evaluation. See [NOTICE](NOTICE) for detail. Please note the licenses of each dataset. Most of the datasets we used in this project are under non-commercial licenses.
 
