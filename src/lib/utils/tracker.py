@@ -90,7 +90,7 @@ class Tracker:
             tracks_emb = np.asarray([track.embedding for track in self.tracks], np.float32)  # M x embedding_dim
             cos_sim = matching.embedding_distance(dets_emb,tracks_emb)           
             gated_cos_sim = cos_sim + invalid * 1.0
-            matched_indices, unmatched_dets, unmatched_tracks = matching.linear_assignment(gated_cos_sim, thresh=0.5) 
+            matched_indices, unmatched_dets, unmatched_tracks = matching.linear_assignment(gated_cos_sim, thresh=0.65) 
             if self.opt.debug == 4:
                 self.oper.write("Cosine Similarity Matrix: \n")
                 self.oper.write(str(cos_sim) + "\n")
