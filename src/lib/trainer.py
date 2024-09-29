@@ -15,7 +15,7 @@ from model.data_parallel import DataParallel
 from utils.utils import AverageMeter
 
 from model.losses import FastFocalLoss, RegWeightedL1Loss
-from model.losses import BinRotLoss, WeightedBCELoss, EmbeddingLoss, EmbeddingVectorLoss
+from model.losses import BinRotLoss, WeightedBCELoss, EmbeddingLoss, EmbeddingVectorLoss, EmbeddingVectorCosineSimilarityLoss
 from model.decode import generic_decode
 from model.utils import _sigmoid, flip_tensor, flip_lr_off, flip_lr, _tranpose_and_gather_feat
 from utils.debugger import Debugger
@@ -28,6 +28,7 @@ class GenericLoss(torch.nn.Module):
     self.crit_reg = RegWeightedL1Loss()
     self.IDLoss = EmbeddingLoss(opt)
     self.crit_vector = EmbeddingVectorLoss(opt)
+    self.cosineSimloss = EmbeddingVectorCosineSimilarityLoss(opt)
     if 'rot' in opt.heads:
       self.crit_rot = BinRotLoss()
     if 'nuscenes_att' in opt.heads:
@@ -102,7 +103,7 @@ class GenericLoss(torch.nn.Module):
           classification_loss += self.IDLoss(output['embedding'], batch['tid_mask'], batch['ind'], batch['tid']) / opt.num_stacks
           #print('Classification loss: ', classification_loss)
         if lambda_vector:
-          vector_loss += self.crit_vector(
+          vector_loss += self.cosineSimloss(
             output['embedding'], batch['vectors_mask'], batch['ind'], batch['vectors']) / opt.num_stacks
           #print('Vector loss: ', vector_loss)
         losses['embedding'] = lambda_class * classification_loss + lambda_vector * vector_loss       

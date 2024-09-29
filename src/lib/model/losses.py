@@ -401,3 +401,45 @@ class EmbeddingVectorLoss(nn.Module):
             print("ind shape: \n", ind.shape)
             print("vector head empty! \n")       
         return vector_loss
+      
+class EmbeddingVectorCosineSimilarityLoss(nn.Module):
+    def __init__(self, opt):
+        super(EmbeddingVectorCosineSimilarityLoss, self).__init__()
+        self.opt = opt
+        self.emb_scale = math.sqrt(2) * math.log(self.opt.nID - 1)
+
+    def forward(self, output, mask, ind, target):
+        # Gather and transpose features as in the MSE loss
+        vector_head = _tranpose_and_gather_feat(output, ind)
+        vector_head_masked = vector_head[mask > 0].contiguous()
+        vector_head_normalized = self.emb_scale * F.normalize(vector_head_masked, dim=1)
+        
+        if vector_head_normalized.numel() > 0:
+            # Normalize the target vectors
+            vector_target = target[mask > 0].contiguous()
+            vector_target_normalized = F.normalize(vector_target, dim=1)
+            
+            # Calculate cosine similarity loss: 1 - cosine similarity
+            cosine_similarity = F.cosine_similarity(vector_head_normalized, vector_target_normalized, dim=1)
+            vector_loss = 1 - cosine_similarity.mean()
+            
+            if self.opt.debug == 4:
+              print("vector head shape: \n", vector_head.shape)
+              print("vector head masked shape: \n", vector_head_masked.shape)
+              print("vector head normalized shape: \n", vector_head_normalized.shape)
+              print("vector head normalized min max: \n", vector_head_normalized.min(), vector_head_normalized.max())
+              print("vector target shape: \n", vector_target.shape)
+              print("vector target normalized shape: \n", vector_target_normalized.shape)
+              print("vector target min max: \n", vector_target_normalized.min(), vector_target_normalized.max())
+        else:
+            vector_loss = torch.tensor(0.0).to(vector_head_normalized.device)
+            if self.opt.debug == 4:
+              print("vector head shape: \n", vector_head.shape)
+              print("vector head masked shape: \n", vector_head_masked.shape)
+              print("vector head normalized shape: \n", vector_head_normalized.shape)
+              print("mask shape: \n", mask.shape)
+              print("output shape: \n", output.shape)
+              print("ind shape: \n", ind.shape)
+              print("vector head empty! \n")
+        
+        return vector_loss
