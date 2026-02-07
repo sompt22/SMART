@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment as linear_assignment_sk
-from numba import jit
 import copy
 import os
 import pathlib
@@ -55,6 +54,14 @@ class Tracker:
         # === Kalman filter prediction for all tracks ===
         for track in self.tracks:
             track.predict()
+
+        # Early return: no tracks to match against, create new tracks for all detections
+        if M == 0:
+            for det in detections:
+                if det['score'] > self.opt.new_thresh:
+                    self.create_new_track(det)
+            self.frm_count += 1
+            return []
 
         if self.tracking_task:
             dets = np.array([det['ct'] + det['tracking'] for det in detections], np.float32) # N x 2
