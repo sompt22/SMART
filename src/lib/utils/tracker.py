@@ -24,21 +24,15 @@ class Tracker:
         base_dir = os.path.join(pathlib.Path().resolve(), "..", "exp", self.opt.task, self.opt.exp_id, "debug")
 
         # Process the task(s) to determine the filename
-        tasks = self.opt.task.split(",")  # Split the task string into a list of individual tasks
-        # Determine the filename based on the task(s)
+        tasks = self.opt.task.split(",")
         if self.tracking_task and self.embedding_task:
-            # If both tracking and embedding tasks are specified
             filename = "tracking_embedding.txt"
         elif self.tracking_task:
-            # If only the tracking task is specified
             filename = "tracking.txt"
         elif self.embedding_task:
-            # If only the embedding task is specified
             filename = "embedding.txt"
         else:
-            # If neither tracking nor embedding tasks are specified
             filename = "debug.txt"
-        # Construct the full path for the file and ensure the directory exists
         full_path = os.path.join(base_dir, filename)
         os.makedirs(os.path.dirname(full_path), exist_ok=True)
         self.oper = open(full_path, "a")
@@ -58,6 +52,10 @@ class Tracker:
         M = len(self.tracks) # Number of Tracks
         if self.opt.debug == 4: self.oper.write("Frame: " + str(self.frm_count) + "\n")
 
+        # === Kalman filter prediction for all tracks ===
+        for track in self.tracks:
+            track.predict()
+
         if self.tracking_task:
             dets = np.array([det['ct'] + det['tracking'] for det in detections], np.float32) # N x 2
         else:
@@ -66,18 +64,17 @@ class Tracker:
         # Detection bbox area & category
         item_size = np.array([((item['bbox'][2] - item['bbox'][0]) * (item['bbox'][3] - item['bbox'][1])) for item in detections], np.float32) # N
         item_cat = np.array([item['class'] for item in detections], np.int32) # N
-        # Track bbox area & category
+        # Track bbox area & category (using KF-predicted positions)
         track_size = np.array([((track.bbox[2] - track.bbox[0]) * (track.bbox[3] - track.bbox[1])) for track in self.tracks], np.float32) # M
         track_cat = np.array([track.class_id for track in self.tracks], np.int32) # M
         tracks = np.array([pre_det.center for pre_det in self.tracks], np.float32) # M x 2
 
-        lse_dist = (((tracks.reshape(1, -1, 2) - dets.reshape(-1, 1, 2)) ** 2).sum(axis=2)) # N x M L2 Norm = Least Square Error (LSE)
+        lse_dist = (((tracks.reshape(1, -1, 2) - dets.reshape(-1, 1, 2)) ** 2).sum(axis=2)) # N x M
         if self.opt.debug == 4:
             self.oper.write(f"Least Square Error (LSE) Matrix: {lse_dist.shape} (Detections x Tracks)" + "\n")
             self.oper.write(str(lse_dist) + "\n")
 
         ## Gating for box size with adaptive threshold
-        # Use max of bbox area and a minimum gate to avoid overly restrictive gating for small objects
         min_gate = 400.0  # minimum gate value (20px^2 equivalent)
         effective_track_size = np.maximum(track_size, min_gate)
         effective_item_size = np.maximum(item_size, min_gate)
@@ -161,7 +158,7 @@ class Tracker:
             # Only update embedding for high-confidence matches to avoid noisy updates
             if new_embedding is not None and detections[m[0]]['score'] < 0.3:
                 new_embedding = None
-            track.update(new_bbox= detections[m[0]]['bbox'],\
+            track.update(new_bbox=detections[m[0]]['bbox'],\
                         new_score=detections[m[0]]['score'],\
                         new_class=detections[m[0]]['class'],\
                         new_ct=detections[m[0]]['ct'],\
@@ -195,19 +192,8 @@ class Tracker:
             if self.opt.debug == 4: self.oper.write(f"Unmatched Track: {track.track_id} \n")
             if track.age < self.max_age:
                 track.increment_age()
-                bbox = track.bbox
-                ct = track.center
-                # Use last known velocity for motion prediction instead of [0,0]
-                if self.tracking_task and track.tracking is not None:
-                    v = track.tracking
-                else:
-                    v = track.center_disp_history
-                new_bbox = [
-                bbox[0] + v[0], bbox[1] + v[1],
-                bbox[2] + v[0], bbox[3] + v[1]]
-                new_center = [ct[0] + v[0], ct[1] + v[1]]
-                track.center = new_center
-                track.bbox = new_bbox
+                # KF already predicted the new position via track.predict() at the top of step()
+                # No need for manual bbox/center extrapolation - KF handles motion model
                 unmatched_track = {'tracking_id': track.track_id, \
                                 'bbox': track.bbox, \
                                 'ct': track.center, \
@@ -239,4 +225,3 @@ class Tracker:
                                  initial_embedding=init_embedding,\
                                  max_age=self.max_age,\
                                  smoothing_window=self.smoothing_window))
-
