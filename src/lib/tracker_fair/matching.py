@@ -106,7 +106,7 @@ def combine_cost_matrices(cosine_similarity_matrix, distance_matrix, similarity_
     Returns:
     numpy.ndarray: Combined cost matrix.
     """
-    combined_matrix = np.zeros((len(cosine_similarity_matrix), len(distance_matrix)), dtype=np.float)
+    combined_matrix = np.zeros((len(cosine_similarity_matrix), len(distance_matrix)), dtype=np.float64)
     if combined_matrix.size == 0:
         return combined_matrix 
       
@@ -127,13 +127,13 @@ def ious(atlbrs, btlbrs):
 
     :rtype ious np.ndarray
     """
-    ious = np.zeros((len(atlbrs), len(btlbrs)), dtype=np.float)
+    ious = np.zeros((len(atlbrs), len(btlbrs)), dtype=np.float64)
     if ious.size == 0:
         return ious
 
     ious = bbox_ious(
-        np.ascontiguousarray(atlbrs, dtype=np.float),
-        np.ascontiguousarray(btlbrs, dtype=np.float)
+        np.ascontiguousarray(atlbrs, dtype=np.float64),
+        np.ascontiguousarray(btlbrs, dtype=np.float64)
     )
 
     return ious
@@ -178,14 +178,14 @@ def embedding_distance___(tracks, detections, metric='cosine'):
     len_tracks = len(tracks)
     len_detections = len(detections)
 
-    cost_matrix = np.zeros((len_tracks,len_detections), dtype=np.float)
-    cost_matrix_inv = np.zeros((len_tracks, len_detections), dtype=np.float)
+    cost_matrix = np.zeros((len_tracks,len_detections), dtype=np.float64)
+    cost_matrix_inv = np.zeros((len_tracks, len_detections), dtype=np.float64)
     if cost_matrix.size == 0:
         return cost_matrix, cost_matrix_inv
-    #det_features = np.asarray([track['embedding'] for track in detections], dtype=np.float)
+    #det_features = np.asarray([track['embedding'] for track in detections], dtype=np.float64)
     #for i, track in enumerate(tracks):
         #cost_matrix[i, :] = np.maximum(0.0, cdist(track.smooth_feat.reshape(1,-1), det_features, metric))
-    #track_features = np.asarray([track['embedding'] for track in tracks], dtype=np.float)
+    #track_features = np.asarray([track['embedding'] for track in tracks], dtype=np.float64)
     #cost_matrix = np.maximum(0.0, cdist(tracks, detections, metric))  # Nomalized features
     
     data_is_normalized = True
@@ -208,20 +208,20 @@ def embedding_distance_(tracks, detections, metric='cosine'):
     :return: cost_matrix np.ndarray
     """
 
-    cost_matrix = np.zeros((len(tracks), len(detections)), dtype=np.float)
-    cost_matrix_inv = np.zeros((len(tracks), len(detections)), dtype=np.float)
+    cost_matrix = np.zeros((len(tracks), len(detections)), dtype=np.float64)
+    cost_matrix_inv = np.zeros((len(tracks), len(detections)), dtype=np.float64)
     if cost_matrix.size == 0:
         return cost_matrix, cost_matrix_inv
-    #det_features = np.asarray([track.curr_feat for track in detections], dtype=np.float)
+    #det_features = np.asarray([track.curr_feat for track in detections], dtype=np.float64)
     #for i, track in enumerate(tracks):
         #cost_matrix[i, :] = np.maximum(0.0, cdist(track.smooth_feat.reshape(1,-1), det_features, metric))
-    #track_features = np.asarray([track.smooth_feat for track in tracks], dtype=np.float)
+    #track_features = np.asarray([track.smooth_feat for track in tracks], dtype=np.float64)
     cost_matrix = np.maximum(0.0, cdist(tracks, detections, metric))  # Nomalized features
     cost_matrix_inv = 1. - cost_matrix
     return cost_matrix, cost_matrix_inv
 
 def embedding_distance(tracks, detections, metric='cosine'):
-    cost_matrix = np.zeros((len(tracks), len(detections)), dtype=np.float)
+    cost_matrix = np.zeros((len(tracks), len(detections)), dtype=np.float64)
     if cost_matrix.size == 0:
         return cost_matrix
     cost_matrix = np.maximum(0.0, cdist(tracks, detections, metric))  # Nomalized features
@@ -285,8 +285,8 @@ def embedding_filter(ret, embedding_history, smoothing_window):
                 smoothed_embedding = emb['tracking_id']  # If the buffer is empty, use the original embedding         
             ret[i]['embedding'] = smoothed_embedding
         else:
-            return ret   
-    return ret       
+            continue
+    return ret
 
 def adjust_similarity_with_gating(cos_sim, invalid):
     # Set a low similarity score for invalid pairs

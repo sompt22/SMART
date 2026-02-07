@@ -21,7 +21,7 @@ class Track(object):
         self.age = 0
         self.active = 1
         self.is_on_probation = True
-        self.probation_frames = 1  # Number of frames to wait before activating the track   
+        self.probation_frames = 2  # Number of frames to wait before activating the track
         self.max_age = max_age  # Tracks are considered inactive if not updated for this many frames  
         self.smoothing_window = smoothing_window  # Number of embeddings to consider for smoothing    
            
@@ -60,15 +60,19 @@ class Track(object):
             self.active = 0
                 
     def smooth_fcn(self, history, new_value):
-        """Smooth the current vector based on the history."""
-        history.append(new_value)
+        """Smooth the current vector using exponential moving average (EMA)."""
+        alpha = 0.9  # Weight for the new value
+        if len(history) == 0:
+            history.append(new_value.copy())
+            return new_value
+        # EMA: emphasize recent embeddings over old ones
+        smoothed = alpha * new_value + (1 - alpha) * history[-1]
+        history.append(new_value.copy())  # Store original, not smoothed
         if len(history) > self.smoothing_window:
             history.pop(0)
-        smoothed = np.mean(history, axis=0)
-        history[-1] = smoothed
         return smoothed
    
     def center_distance(self, new_center):
-        """Calculate the distance between the track's center and a new center."""
-        return np.array(self.center) - np.array(new_center)
+        """Calculate the displacement vector from old center to new center."""
+        return np.array(new_center) - np.array(self.center)
                    
