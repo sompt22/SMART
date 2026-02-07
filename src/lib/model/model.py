@@ -52,7 +52,7 @@ def load_model(model, model_path, opt, optimizer=None):
           print('Reusing parameter {}, required shape{}, '\
                 'loaded shape{}.'.format(
             k, model_state_dict[k].shape, state_dict[k].shape))
-          if state_dict[k].shape[0] < state_dict[k].shape[0]:
+          if state_dict[k].shape[0] < model_state_dict[k].shape[0]:
             model_state_dict[k][:state_dict[k].shape[0]] = state_dict[k]
           else:
             model_state_dict[k] = state_dict[k][:model_state_dict[k].shape[0]]

@@ -123,9 +123,9 @@ class GenericLoss(torch.nn.Module):
       return losses['tot'], losses
 
 
-class ModleWithLoss(torch.nn.Module):
+class ModelWithLoss(torch.nn.Module):
   def __init__(self, model, loss):
-    super(ModleWithLoss, self).__init__()
+    super(ModelWithLoss, self).__init__()
     self.model = model
     self.loss = loss
   
@@ -142,7 +142,7 @@ class Trainer(object):
     self.opt = opt
     self.optimizer = optimizer
     self.loss_stats, self.loss = self._get_losses(opt)
-    self.model_with_loss = ModleWithLoss(model, self.loss)
+    self.model_with_loss = ModelWithLoss(model, self.loss)
     self.optimizer.add_param_group({'params': self.loss.parameters()})
 
   def set_device(self, gpus, chunk_sizes, device):
@@ -187,8 +187,10 @@ class Trainer(object):
       output, loss, loss_stats = model_with_loss(batch)
       loss = loss.mean()
       if phase == 'train':
-        self.optimizer.zero_grad()
+        self.optimizer.zero_grad(set_to_none=True)
         loss.backward()
+        nn.utils.clip_grad_norm_(
+          self.model_with_loss.parameters(), max_norm=10.0)
         self.optimizer.step()
       batch_time.update(time.time() - end)
       end = time.time()

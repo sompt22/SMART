@@ -25,38 +25,26 @@ class BaseModel(nn.Module):
             classes = self.heads[head]
             head_conv = head_convs[head]
             if len(head_conv) > 0:
-              out = nn.Conv2d(head_conv[-1], classes, 
+              out = nn.Conv2d(head_conv[-1], classes,
                     kernel_size=1, stride=1, padding=0, bias=True)
               conv = nn.Conv2d(last_channel, head_conv[0],
-                               kernel_size=head_kernel, 
+                               kernel_size=head_kernel,
                                padding=head_kernel // 2, bias=True)
               convs = [conv]
               for k in range(1, len(head_conv)):
-                  convs.append(nn.Conv2d(head_conv[k - 1], head_conv[k], 
+                  convs.append(nn.Conv2d(head_conv[k - 1], head_conv[k],
                                kernel_size=1, bias=True))
-              if len(convs) == 1:
-                fc = nn.Sequential(conv, nn.ReLU(inplace=True), out)
-              elif len(convs) == 2:
-                fc = nn.Sequential(
-                  convs[0], nn.ReLU(inplace=True), 
-                  convs[1], nn.ReLU(inplace=True), out)
-              elif len(convs) == 3:
-                fc = nn.Sequential(
-                    convs[0], nn.ReLU(inplace=True), 
-                    convs[1], nn.ReLU(inplace=True), 
-                    convs[2], nn.ReLU(inplace=True), out)
-              elif len(convs) == 4:
-                fc = nn.Sequential(
-                    convs[0], nn.ReLU(inplace=True), 
-                    convs[1], nn.ReLU(inplace=True), 
-                    convs[2], nn.ReLU(inplace=True), 
-                    convs[3], nn.ReLU(inplace=True), out)
+              layers = []
+              for c in convs:
+                  layers.extend([c, nn.ReLU(inplace=True)])
+              layers.append(out)
+              fc = nn.Sequential(*layers)
               if 'hm' in head:
                 fc[-1].bias.data.fill_(opt.prior_bias)
               else:
                 fill_fc_weights(fc)
             else:
-              fc = nn.Conv2d(last_channel, classes, 
+              fc = nn.Conv2d(last_channel, classes,
                   kernel_size=1, stride=1, padding=0, bias=True)
               if 'hm' in head:
                 fc.bias.data.fill_(opt.prior_bias)

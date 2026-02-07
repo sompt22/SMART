@@ -209,8 +209,8 @@ class GenericDataset(data.Dataset):
     hm_h, hm_w = self.opt.input_h, self.opt.input_w
     down_ratio = self.opt.down_ratio
     trans = trans_input
-    reutrn_hm = self.opt.pre_hm
-    pre_hm = np.zeros((1, hm_h, hm_w), dtype=np.float32) if reutrn_hm else None
+    return_hm = self.opt.pre_hm
+    pre_hm = np.zeros((1, hm_h, hm_w), dtype=np.float32) if return_hm else None
     pre_cts, track_ids, embedding_vectors = [], [], []
     for ann in anns:
       cls_id = int(self.cat_ids[ann['category_id']])
@@ -246,10 +246,10 @@ class GenericDataset(data.Dataset):
         track_ids.append(ann['track_id'] if 'track_id' in ann else -1)
         if self.opt.know_dist_weight:
           embedding_vectors.append(ann['embedding'])
-        if reutrn_hm:
+        if return_hm:
           draw_umich_gaussian(pre_hm[0], ct_int, radius, k=conf)
 
-        if np.random.random() < self.opt.fp_disturb and reutrn_hm:
+        if np.random.random() < self.opt.fp_disturb and return_hm:
           ct2 = ct0.copy()
           # Hard code heatmap disturb ratio, haven't tried other numbers.
           ct2[0] = ct2[0] + np.random.randn() * 0.05 * w
@@ -276,13 +276,10 @@ class GenericDataset(data.Dataset):
     else:
       sf = self.opt.scale
       cf = self.opt.shift
-      if type(s) == float:
+      if isinstance(s, (int, float)):
         s = [s, s]
-        c[0] += s[0] * np.clip(np.random.randn()*cf, -2*cf, 2*cf)
-        c[1] += s[1] * np.clip(np.random.randn()*cf, -2*cf, 2*cf)
-      else:  
-        c[0] += s * np.clip(np.random.randn()*cf, -2*cf, 2*cf)
-        c[1] += s * np.clip(np.random.randn()*cf, -2*cf, 2*cf)
+      c[0] += s[0] * np.clip(np.random.randn()*cf, -2*cf, 2*cf)
+      c[1] += s[1] * np.clip(np.random.randn()*cf, -2*cf, 2*cf)
       aug_s = np.clip(np.random.randn()*sf + 1, 1 - sf, 1 + sf)
     
     if np.random.random() < self.opt.aug_rot:
@@ -484,7 +481,7 @@ class GenericDataset(data.Dataset):
         gt_det['tid'].append(np.array(-1,dtype=np.int64))
           
       if self.opt.know_dist_weight:
-        if ann['embedding'] in embedding_vectors:
+        if 'embedding' in ann and ann['track_id'] in track_ids:
           ret['vectors_mask'][k] = 1
           ret['vectors'][k] = ann['embedding']
           gt_det['vectors'].append(ret['vectors'][k])
