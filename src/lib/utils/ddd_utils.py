@@ -74,7 +74,7 @@ def draw_box_3d(image, corners, c=(255, 0, 255), same_color=False):
       try:
         cv2.line(image, (corners[f[j], 0], corners[f[j], 1]),
             (corners[f[(j+1)%4], 0], corners[f[(j+1)%4], 1]), cc, thickness, lineType=cv2.LINE_AA)
-      except:
+      except cv2.error:
         pass
     if ind_f == 0:
       try:
@@ -82,7 +82,7 @@ def draw_box_3d(image, corners, c=(255, 0, 255), same_color=False):
                  (corners[f[2], 0], corners[f[2], 1]), c, 1, lineType=cv2.LINE_AA)
         cv2.line(image, (corners[f[1], 0], corners[f[1], 1]),
                  (corners[f[3], 0], corners[f[3], 1]), c, 1, lineType=cv2.LINE_AA)
-      except:
+      except cv2.error:
         pass
     # top_idx = [0, 1, 2, 3]
   return image

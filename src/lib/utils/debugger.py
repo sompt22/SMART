@@ -255,7 +255,7 @@ class Debugger(object):
     if genID:
       try:
         idx = int(np.loadtxt(path + '/id.txt'))
-      except:
+      except (OSError, ValueError):
         idx = 0
       prefix=idx
       np.savetxt(path + '/id.txt', np.ones(1) * (idx + 1), fmt='%d')

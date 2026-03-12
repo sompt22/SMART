@@ -168,7 +168,7 @@ class Detector(object):
       try:
         # return debug image for saving video
         ret.update({'generic': self.debugger.imgs['generic']})
-      except:
+      except KeyError:
         pass
     return ret
 

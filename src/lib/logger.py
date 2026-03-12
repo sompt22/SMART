@@ -12,7 +12,7 @@ USE_TENSORBOARD = True
 try:
   import tensorboardX
   print('Using tensorboardX')
-except:
+except ImportError:
   USE_TENSORBOARD = False
 
 class Logger(object):
@@ -46,10 +46,7 @@ class Logger(object):
     else:
       os.makedirs(log_dir, exist_ok=True)
     self.log = open(log_dir + '/log.txt', 'w')
-    try:
-      os.system('cp {}/opt.txt {}/'.format(opt.save_dir, log_dir))
-    except:
-      pass
+    os.system('cp {}/opt.txt {}/'.format(opt.save_dir, log_dir))
     self.start_line = True
 
   def write(self, txt):

@@ -63,7 +63,8 @@ def prefetch_test(opt):
   detector = Detector(opt)
   
   if opt.load_results != '':
-    load_results = json.load(open(opt.load_results, 'r'))
+    with open(opt.load_results, 'r') as f:
+      load_results = json.load(f)
     for img_id in load_results:
       for k in range(len(load_results[img_id])):
         if load_results[img_id][k]['class'] - 1 in opt.ignore_loaded_cats:
@@ -124,9 +125,9 @@ def prefetch_test(opt):
   if opt.save_results:
     print('saving results to', opt.save_dir + '/save_results_{}{}.json'.format(
       opt.test_dataset, opt.dataset_version))
-    json.dump(_to_list(copy.deepcopy(results)), 
-              open(opt.save_dir + '/save_results_{}{}.json'.format(
-                opt.test_dataset, opt.dataset_version), 'w'))
+    with open(opt.save_dir + '/save_results_{}{}.json'.format(
+        opt.test_dataset, opt.dataset_version), 'w') as f:
+      json.dump(_to_list(copy.deepcopy(results)), f)
   dataset.run_eval(results, opt.save_dir)
 
 def test(opt):
@@ -142,7 +143,8 @@ def test(opt):
   detector = Detector(opt)
 
   if opt.load_results != '': # load results in json
-    load_results = json.load(open(opt.load_results, 'r'))
+    with open(opt.load_results, 'r') as f:
+      load_results = json.load(f)
 
   results = {}
   num_iters = len(dataset) if opt.num_iters < 0 else opt.num_iters
@@ -173,9 +175,9 @@ def test(opt):
   if opt.save_results:
     print('saving results to', opt.save_dir + '/save_results_{}{}.json'.format(
       opt.test_dataset, opt.dataset_version))
-    json.dump(_to_list(copy.deepcopy(results)), 
-              open(opt.save_dir + '/save_results_{}{}.json'.format(
-                opt.test_dataset, opt.dataset_version), 'w'))
+    with open(opt.save_dir + '/save_results_{}{}.json'.format(
+        opt.test_dataset, opt.dataset_version), 'w') as f:
+      json.dump(_to_list(copy.deepcopy(results)), f)
   dataset.run_eval(results, opt.save_dir)
 
 

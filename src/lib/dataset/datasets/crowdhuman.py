@@ -79,9 +79,8 @@ class CrowdHuman(GenericDataset):
                        '{}/results_crowdhuman.odgt'.format(save_dir))
   def run_eval(self, results, save_dir):
     self.save_results(results, save_dir)
-    try:
-      os.system('python tools/crowdhuman_eval/demo.py ' + \
-                '../data/crowdhuman/annotation_val.odgt ' + \
-                '{}/results_crowdhuman.odgt'.format(save_dir))
-    except:
+    ret = os.system('python tools/crowdhuman_eval/demo.py ' + \
+                    '../data/crowdhuman/annotation_val.odgt ' + \
+                    '{}/results_crowdhuman.odgt'.format(save_dir))
+    if ret != 0:
       print('Crowdhuman evaluation not setup!')

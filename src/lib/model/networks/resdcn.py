@@ -18,7 +18,7 @@ import torch.nn as nn
 
 try:
   from .DCNv2.dcn_v2 import DCN
-except:
+except ImportError:
   print('Import DCN failed')
   DCN = None
 import torch.utils.model_zoo as model_zoo
