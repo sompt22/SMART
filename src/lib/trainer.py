@@ -107,21 +107,21 @@ class GenericLoss(torch.nn.Module):
           vector_loss += self.cosineSimloss(
             output['embedding'], batch['vectors_mask'], batch['ind'], batch['vectors']) / opt.num_stacks
           #print('Vector loss: ', vector_loss)
-        losses['embedding'] = lambda_class * classification_loss + lambda_vector * vector_loss       
-        
-      losses['tot'] = 0
-      for head in opt.heads:
-        if 'embedding' != head:
-          losses['tot'] += opt.weights[head] * losses[head]
-      
-      if 'embedding' in self.opt.heads:
-        if opt.multi_loss == 'uncertainty':
-            losses['tot'] = torch.exp(-self.s_det) * losses['tot'] + torch.exp(-self.s_id) * losses['embedding'] + (self.s_det + self.s_id)
-            losses['tot'] *= 0.5
-        else:
-            losses['tot'] = losses['tot'] + opt.embedding_weight * losses['embedding'] 
+        losses['embedding'] = lambda_class * classification_loss + lambda_vector * vector_loss
 
-      return losses['tot'], losses
+    losses['tot'] = 0
+    for head in opt.heads:
+      if 'embedding' != head:
+        losses['tot'] += opt.weights[head] * losses[head]
+
+    if 'embedding' in self.opt.heads:
+      if opt.multi_loss == 'uncertainty':
+          losses['tot'] = torch.exp(-self.s_det) * losses['tot'] + torch.exp(-self.s_id) * losses['embedding'] + (self.s_det + self.s_id)
+          losses['tot'] *= 0.5
+      else:
+          losses['tot'] = losses['tot'] + opt.embedding_weight * losses['embedding']
+
+    return losses['tot'], losses
 
 
 class ModelWithLoss(torch.nn.Module):
@@ -168,6 +168,7 @@ class Trainer(object):
         model_with_loss = self.model_with_loss.module
       model_with_loss.eval()
       torch.cuda.empty_cache()
+      torch.set_grad_enabled(False)
 
     opt = self.opt
     results = {}
@@ -217,6 +218,8 @@ class Trainer(object):
       del output, loss, loss_stats
     
     bar.finish()
+    if phase != 'train':
+      torch.set_grad_enabled(True)
     ret = {k: v.avg for k, v in avg_loss_stats.items()}
     ret['time'] = bar.elapsed_td.total_seconds() / 60.
     return ret, results
