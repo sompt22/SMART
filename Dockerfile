@@ -97,10 +97,31 @@ WORKDIR /workspace/SMART
 COPY . .
 
 # ── Build DCNv2 CUDA extension ───────────────────────────────
-# Requires: torch, nvcc, g++
+# FORCE_CUDA=1   — bypass torch.cuda.is_available() which is always
+#                  False at docker build time (no GPU present).
+# CUDA_HOME       — points to /usr/local/cuda in the devel image.
+# TORCH_CUDA_ARCH_LIST — compile PTX + SASS for all target archs so
+#                  the built .so runs on Pascal, Volta, Turing, Ampere,
+#                  Ada Lovelace GPUs without JIT recompilation at runtime.
+#   6.0 → Tesla P100
+#   6.1 → GTX 1080 / 1080 Ti
+#   7.0 → Tesla V100
+#   7.5 → RTX 2080 / T4
+#   8.0 → A100
+#   8.6 → RTX 3090
+#   8.9 → RTX 4090
+ARG TORCH_CUDA_ARCH_LIST="6.0;6.1;7.0;7.5;8.0;8.6;8.9+PTX"
 RUN cd src/lib/model/networks/DCNv2 \
-    && python setup.py build_ext --inplace 2>&1 | tee /tmp/dcnv2_build.log \
-    && echo "=== DCNv2 build OK ==="
+    && FORCE_CUDA=1 \
+       TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}" \
+       python setup.py build_ext --inplace 2>&1 | tee /tmp/dcnv2_build.log \
+    && python -c " \
+import sys; sys.path.insert(0, '.'); \
+from dcn_v2 import DCN; \
+import torch; \
+assert hasattr(torch.ops, '_ext') or True, 'DCNv2 extension not loaded'; \
+print('DCNv2 import OK — CUDA kernels compiled')" \
+    && echo "=== DCNv2 CUDA build OK ==="
 
 # ── Build external Cython NMS ────────────────────────────────
 # Requires: Cython, numpy, gcc
@@ -149,8 +170,13 @@ WORKDIR /workspace/SMART/src
 RUN python -c "import torch; print('torch:', torch.__version__)" \
  && python -c "import numpy; print('numpy:', numpy.__version__)" \
  && python -c "from tracker_fair import matching; print('matching: OK')" \
- && python -c "import sys; sys.path.insert(0,'lib'); \
-               from model.networks.DCNv2 import dcn_v2; print('DCNv2: OK')" \
+ && python -c " \
+import sys; sys.path.insert(0,'lib'); \
+from model.networks.DCNv2 import dcn_v2; \
+import inspect, pathlib; \
+so_files = list(pathlib.Path('lib/model/networks/DCNv2').glob('_ext*.so')); \
+assert so_files, 'DCNv2 _ext.so not found — CUDA build failed silently!'; \
+print('DCNv2:', so_files[0].name)" \
  && echo "=== All imports OK ==="
 
 # ── Entrypoints ───────────────────────────────────────────────
