@@ -1,0 +1,42 @@
+# ── Version control ─────────────────────────────────────────
+.git
+.gitignore
+
+# ── Python caches ────────────────────────────────────────────
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+**/__pycache__
+
+# ── Build artifacts (rebuilt inside container) ───────────────
+src/lib/model/networks/DCNv2/build/
+src/lib/external/build/
+*.egg-info/
+dist/
+
+# ── Experiment outputs (large, mounted at runtime) ──────────
+exp/
+
+# ── Data (mounted at runtime via -v) ────────────────────────
+data/
+*.mp4
+*.avi
+*.mov
+
+# ── Editor / OS clutter ──────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.DS_Store
+Thumbs.db
+
+# ── Notebooks & temp files ───────────────────────────────────
+*.ipynb
+*.log
+/tmp/
+
+# ── CI / docs ────────────────────────────────────────────────
+.github/
+readme/
+*.md
