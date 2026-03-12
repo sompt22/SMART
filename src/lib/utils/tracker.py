@@ -63,7 +63,7 @@ class Tracker:
             self.frm_count += 1
             return []
 
-        if self.tracking_task:
+        if self.tracking_task and all('tracking' in det for det in detections):
             dets = np.array([det['ct'] + det['tracking'] for det in detections], np.float32) # N x 2
         else:
             dets = np.array([det['ct'] for det in detections], np.float32) # N x 2
