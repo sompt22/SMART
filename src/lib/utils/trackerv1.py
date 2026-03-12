@@ -37,6 +37,11 @@ class Tracker(object):
         os.makedirs(os.path.dirname(full_path), exist_ok=True)
         self.oper = open(full_path, "a")
 
+    def close(self):
+        if self.opt.debug == 4 and hasattr(self, 'oper'):
+            self.oper.flush()
+            self.oper.close()
+
     def init_track(self, results):
         for item in results:
             if item['score'] > self.opt.new_thresh:
@@ -88,6 +93,7 @@ class Tracker(object):
                 self.oper.write(f"Matched Indices:\n{matched_indices}\n")
                 self.oper.write(f"Unmatched Detections: {unmatched_dets}\n")
                 self.oper.write(f"Unmatched Tracks: {unmatched_tracks}\n")
+                self.oper.flush()
 
         elif 'tracking' in self.opt.heads:
             # Tracking only: spatial distance matching
@@ -114,6 +120,7 @@ class Tracker(object):
                 self.oper.write(f"Matched Indices:\n{matched_indices}\n")
                 self.oper.write(f"Unmatched Detections: {unmatched_dets}\n")
                 self.oper.write(f"Unmatched Tracks: {unmatched_tracks}\n")
+                self.oper.flush()
 
         elif 'embedding' in self.opt.task:
             # Embedding only: cosine similarity matching
@@ -129,6 +136,7 @@ class Tracker(object):
                 self.oper.write(f"Matched Indices:\n{matched_indices}\n")
                 self.oper.write(f"Unmatched Detections: {unmatched_dets}\n")
                 self.oper.write(f"Unmatched Tracks: {unmatched_tracks}\n")
+                self.oper.flush()
 
         ret = []
         for m in matched_indices:

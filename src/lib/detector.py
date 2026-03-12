@@ -456,6 +456,7 @@ class Detector(object):
   
 
   def reset_tracking(self):
+    self.tracker.close()
     self.tracker.reset()
     self.pre_images = None
     self.pre_image_ori = None

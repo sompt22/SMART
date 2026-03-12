@@ -219,7 +219,14 @@ class Tracker:
         for track in tracks_to_remove:
             self.tracks.remove(track)
         self.frm_count += 1
+        if self.opt.debug == 4:
+            self.oper.flush()
         return ret
+
+    def close(self):
+        if self.opt.debug == 4 and hasattr(self, 'oper'):
+            self.oper.flush()
+            self.oper.close()
 
     def create_new_track(self, detection):
         """Create a new track for a detection."""
