@@ -11,7 +11,7 @@
 ## conda install ninja
 ## conda install cudatoolkit-dev -c conda-forge
 #pip install python-dev-tools --user --upgrade
-## numpy 1.23.5 olacak ONEMLI!!!!!!!!!!!!!!!!! pip install numpy==1.23.5
+numpy==1.23.5
 opencv-python
 Cython
 numba

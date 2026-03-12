@@ -96,7 +96,10 @@ class Tracker:
             self.oper.write(str(lse_dist) + "\n")
 
         # === Stage 1: Embedding-based association ===
-        if self.embedding_task:
+        embeddings_valid = self.embedding_task and \
+            all(det['embedding'] is not None for det in detections) and \
+            all(track.embedding is not None for track in self.tracks)
+        if embeddings_valid:
             dets_emb = np.asarray([det['embedding'] for det in detections], np.float32)      # N x embedding_dim
             tracks_emb = np.asarray([track.embedding for track in self.tracks], np.float32)  # M x embedding_dim
             cos_sim = matching.embedding_distance(dets_emb, tracks_emb)

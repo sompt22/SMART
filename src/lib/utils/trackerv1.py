@@ -159,7 +159,7 @@ class Tracker(object):
                 track['ct'] = [ct[0] + v[0], ct[1] + v[1]]
                 ret.append(track)
 
-        if "embedding" in self.opt.heads:
+        if "embedding" in self.opt.task:
             ret = matching.embedding_filter(ret, self.embedding_history, self.smoothing_window)
         self.tracks = ret
         return ret

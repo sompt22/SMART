@@ -58,7 +58,8 @@ class GenericLoss(torch.nn.Module):
       lambda_vector = self.opt.know_dist_weight  # Weight for vector loss
     else:
       lambda_class = 1
-      lambda_vector = 0     
+      lambda_vector = 0
+      # Vector (knowledge distillation) loss disabled: set --know_dist_weight to enable
     
     for s in range(opt.num_stacks):
       output = outputs[s]
