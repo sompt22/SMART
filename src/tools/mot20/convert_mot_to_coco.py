@@ -39,8 +39,8 @@ if __name__ == '__main__':
       height, width, c = img.shape       
       for i in range(num_images):
         image_info = {'file_name': '{}/img1/{}'.format(seq, images[i]),
-                      'width': height,
-                      'height': width,
+                      'width': width,
+                      'height': height,
                       'id': image_cnt + i + 1,
                       'frame_id': i + 1,
                       'prev_image_id': image_cnt + i if i > 0 else -1,
