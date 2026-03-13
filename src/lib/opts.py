@@ -226,7 +226,7 @@ class opts(object):
     self.parser.add_argument('--no_pre_img', action='store_true')
     self.parser.add_argument('--zero_tracking', action='store_true')
     self.parser.add_argument('--hungarian', action='store_true')
-    self.parser.add_argument('--max_age', type=int, default=-1)
+    self.parser.add_argument('--max_age', type=int, default=30)
 
 
     # loss

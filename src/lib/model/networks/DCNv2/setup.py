@@ -24,7 +24,10 @@ def get_extensions():
     define_macros = []
 
     
-    if torch.cuda.is_available() and CUDA_HOME is not None:
+    # FORCE_CUDA=1 allows building CUDA extension inside Docker where
+    # torch.cuda.is_available() returns False (no GPU at build time).
+    force_cuda = os.environ.get("FORCE_CUDA", "0") == "1"
+    if (force_cuda or torch.cuda.is_available()) and CUDA_HOME is not None:
         extension = CUDAExtension
         sources += source_cuda
         define_macros += [("WITH_CUDA", None)]
@@ -35,8 +38,11 @@ def get_extensions():
             "-D__CUDA_NO_HALF2_OPERATORS__",
         ]
     else:
-        # raise NotImplementedError('Cuda is not available')
-        pass
+        raise RuntimeError(
+            "CUDA is not available and FORCE_CUDA is not set. "
+            "DCNv2 requires CUDA. Set FORCE_CUDA=1 when building "
+            "inside Docker (no GPU at build time)."
+        )
 
     sources = [os.path.join(extensions_dir, s) for s in sources]
     include_dirs = [extensions_dir]

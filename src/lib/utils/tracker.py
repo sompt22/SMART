@@ -63,7 +63,7 @@ class Tracker:
             self.frm_count += 1
             return []
 
-        if self.tracking_task:
+        if self.tracking_task and all('tracking' in det for det in detections):
             dets = np.array([det['ct'] + det['tracking'] for det in detections], np.float32) # N x 2
         else:
             dets = np.array([det['ct'] for det in detections], np.float32) # N x 2
@@ -96,7 +96,10 @@ class Tracker:
             self.oper.write(str(lse_dist) + "\n")
 
         # === Stage 1: Embedding-based association ===
-        if self.embedding_task:
+        embeddings_valid = self.embedding_task and \
+            all(det['embedding'] is not None for det in detections) and \
+            all(track.embedding is not None for track in self.tracks)
+        if embeddings_valid:
             dets_emb = np.asarray([det['embedding'] for det in detections], np.float32)      # N x embedding_dim
             tracks_emb = np.asarray([track.embedding for track in self.tracks], np.float32)  # M x embedding_dim
             cos_sim = matching.embedding_distance(dets_emb, tracks_emb)
@@ -216,7 +219,14 @@ class Tracker:
         for track in tracks_to_remove:
             self.tracks.remove(track)
         self.frm_count += 1
+        if self.opt.debug == 4:
+            self.oper.flush()
         return ret
+
+    def close(self):
+        if self.opt.debug == 4 and hasattr(self, 'oper'):
+            self.oper.flush()
+            self.oper.close()
 
     def create_new_track(self, detection):
         """Create a new track for a detection."""

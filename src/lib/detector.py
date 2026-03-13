@@ -63,7 +63,7 @@ class Detector(object):
     pre_processed = False
     if isinstance(image_or_path_or_tensor, np.ndarray):
       image = image_or_path_or_tensor
-    elif type(image_or_path_or_tensor) == type (''): 
+    elif isinstance(image_or_path_or_tensor, str):
       image = cv2.imread(image_or_path_or_tensor)
     else:
       image = image_or_path_or_tensor['image'][0].numpy()
@@ -168,7 +168,7 @@ class Detector(object):
       try:
         # return debug image for saving video
         ret.update({'generic': self.debugger.imgs['generic']})
-      except:
+      except KeyError:
         pass
     return ret
 
@@ -456,6 +456,7 @@ class Detector(object):
   
 
   def reset_tracking(self):
+    self.tracker.close()
     self.tracker.reset()
     self.pre_images = None
     self.pre_image_ori = None

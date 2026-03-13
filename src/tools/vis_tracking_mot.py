@@ -61,7 +61,7 @@ if __name__ == '__main__':
       pred_path = sys.argv[K] + '/{}.txt'.format(seq)
       try:
         preds = np.loadtxt(pred_path, dtype=np.float32, delimiter=',')
-      except:
+      except ValueError:
         preds = np.loadtxt(pred_path, dtype=np.float32, delimiter=' ')
       for i in range(preds.shape[0]):
         frame_id = int(preds[i][0])

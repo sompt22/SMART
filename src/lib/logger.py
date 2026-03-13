@@ -12,7 +12,7 @@ USE_TENSORBOARD = True
 try:
   import tensorboardX
   print('Using tensorboardX')
-except:
+except ImportError:
   USE_TENSORBOARD = False
 
 class Logger(object):
@@ -44,15 +44,9 @@ class Logger(object):
     if USE_TENSORBOARD:
       self.writer = tensorboardX.SummaryWriter(log_dir=log_dir)
     else:
-      if not os.path.exists(os.path.dirname(log_dir)):
-        os.mkdir(os.path.dirname(log_dir))
-      if not os.path.exists(log_dir):
-        os.mkdir(log_dir)
+      os.makedirs(log_dir, exist_ok=True)
     self.log = open(log_dir + '/log.txt', 'w')
-    try:
-      os.system('cp {}/opt.txt {}/'.format(opt.save_dir, log_dir))
-    except:
-      pass
+    os.system('cp {}/opt.txt {}/'.format(opt.save_dir, log_dir))
     self.start_line = True
 
   def write(self, txt):
@@ -73,3 +67,5 @@ class Logger(object):
     """Log a scalar variable."""
     if USE_TENSORBOARD:
       self.writer.add_scalar(tag, value, step)
+    else:
+      self.write('[scalar] step={} {}: {}\n'.format(step, tag, value))

@@ -64,6 +64,7 @@ def embedding_distance(tracks, detections, metric='cosine'):
     if cost_matrix.size == 0:
         return cost_matrix
     cost_matrix = np.maximum(0.0, cdist(tracks, detections, metric))
+    cost_matrix = np.nan_to_num(cost_matrix, nan=1.0, posinf=1.0, neginf=0.0)
     return cost_matrix
 
 

@@ -192,9 +192,9 @@ def test_det(
             mP.append(P.mean())
 
             # Means of all images
-            mean_mAP = np.sum(mAPs) / (AP_accum_count + 1E-16)
-            mean_R = np.sum(mR) / (AP_accum_count + 1E-16)
-            mean_P = np.sum(mP) / (AP_accum_count + 1E-16)
+            mean_mAP = AP_accum[0] / (AP_accum_count[0] + 1E-16)
+            mean_R = np.mean(mR)
+            mean_P = np.mean(mP)
 
         if batch_i % print_interval == 0:
             # Print image mAP and running mean mAP
