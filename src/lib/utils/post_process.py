@@ -7,7 +7,6 @@ import cv2
 from .image import transform_preds_with_trans, get_affine_transform
 from .ddd_utils import ddd2locrot, comput_corners_3d
 from .ddd_utils import project_to_image, rot_y2alpha
-import numba
 from .image import transform_preds
 
 def get_alpha(rot):
@@ -44,7 +43,7 @@ def ctdet_post_process(dets, c, s, h, w, num_classes):
 def generic_post_process(
   opt, dets, c, s, h, w, num_classes, calibs=None, height=-1, width=-1):
   if not ('scores' in dets):
-    return [{}], [{}]
+    return [[]]
   ret = []
 
   for i in range(len(dets['scores'])):

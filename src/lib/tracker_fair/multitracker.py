@@ -28,7 +28,7 @@ class STrack(BaseTrack):
     def __init__(self, tlwh, score, temp_feat, buffer_size=30):
 
         # wait activate
-        self._tlwh = np.asarray(tlwh, dtype=np.float)
+        self._tlwh = np.asarray(tlwh, dtype=np.float64)
         self.kalman_filter = None
         self.mean, self.covariance = None, None
         self.is_activated = False
@@ -42,16 +42,23 @@ class STrack(BaseTrack):
         self.alpha = 0.9
 
     def update_features(self, feat):
-        feat /= np.linalg.norm(feat)
+        feat = feat.copy()
+        norm = np.linalg.norm(feat)
+        if norm > 1e-6:
+            feat /= norm
         self.curr_feat = feat
         if self.smooth_feat is None:
             self.smooth_feat = feat
         else:
             self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
         self.features.append(feat)
-        self.smooth_feat /= np.linalg.norm(self.smooth_feat)
+        smooth_norm = np.linalg.norm(self.smooth_feat)
+        if smooth_norm > 1e-6:
+            self.smooth_feat /= smooth_norm
 
     def predict(self):
+        if self.mean is None:
+            return
         mean_state = self.mean.copy()
         if self.state != TrackState.Tracked:
             mean_state[7] = 0
@@ -146,7 +153,10 @@ class STrack(BaseTrack):
         """
         ret = np.asarray(tlwh).copy()
         ret[:2] += ret[2:] / 2
-        ret[2] /= ret[3]
+        if ret[3] > 0:
+            ret[2] /= ret[3]
+        else:
+            ret[2] = 0
         return ret
 
     def to_xyah(self):
@@ -187,7 +197,7 @@ class JDETracker(object):
 
         self.frame_id = 0
         self.det_thresh = opt.conf_thres
-        self.buffer_size = int(frame_rate / 30.0 * opt.track_buffer)
+        self.buffer_size = max(1, int(frame_rate / 30.0 * opt.track_buffer))
         self.max_time_lost = self.buffer_size
         self.max_per_image = opt.K
         self.mean = np.array(opt.mean, dtype=np.float32).reshape(1, 1, 3)
@@ -293,7 +303,7 @@ class JDETracker(object):
         #for strack in strack_pool:
             #strack.predict()
         STrack.multi_predict(strack_pool)
-        dists = matching.embedding_distance(strack_pool, detections)
+        dists = matching.embedding_distance(detections, strack_pool)
         #dists = matching.iou_distance(strack_pool, detections)
         dists = matching.fuse_motion(self.kalman_filter, dists, strack_pool, detections)
         matches, u_track, u_detection = matching.linear_assignment(dists, thresh=0.4)
@@ -364,6 +374,10 @@ class JDETracker(object):
         self.lost_stracks.extend(lost_stracks)
         self.lost_stracks = sub_stracks(self.lost_stracks, self.removed_stracks)
         self.removed_stracks.extend(removed_stracks)
+        # Prune old removed tracks to prevent unbounded memory growth
+        max_removed = self.buffer_size * 10
+        if len(self.removed_stracks) > max_removed:
+            self.removed_stracks = self.removed_stracks[-max_removed:]
         self.tracked_stracks, self.lost_stracks = remove_duplicate_stracks(self.tracked_stracks, self.lost_stracks)
         # get scores of lost tracks
         output_stracks = [track for track in self.tracked_stracks if track.is_activated]

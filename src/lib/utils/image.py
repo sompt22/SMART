@@ -38,8 +38,10 @@ def get_affine_transform(center,
                          scale,
                          rot,
                          output_size,
-                         shift=np.array([0, 0], dtype=np.float32),
+                         shift=None,
                          inv=0):
+    if shift is None:
+        shift = np.array([0, 0], dtype=np.float32)
     if not isinstance(scale, np.ndarray) and not isinstance(scale, list):
         scale = np.array([scale, scale], dtype=np.float32)
 
@@ -138,11 +140,15 @@ def gaussian2D(shape, sigma=1):
 def draw_umich_gaussian(heatmap, center, radius, k=1):
   diameter = 2 * radius + 1
   gaussian = gaussian2D((diameter, diameter), sigma=diameter / 6)
-  
+
   x, y = int(center[0]), int(center[1])
 
   height, width = heatmap.shape[0:2]
-    
+
+  # Guard against out-of-bounds centers
+  if x < 0 or x >= width or y < 0 or y >= height:
+    return heatmap
+
   left, right = min(x, radius), min(width - x, radius + 1)
   top, bottom = min(y, radius), min(height - y, radius + 1)
   masked_heatmap  = heatmap[y - top:y + bottom, x - left:x + right]
@@ -187,7 +193,7 @@ def draw_msra_gaussian(heatmap, center, sigma):
   tmp_size = sigma * 3
   mu_x = int(center[0] + 0.5)
   mu_y = int(center[1] + 0.5)
-  w, h = heatmap.shape[0], heatmap.shape[1]
+  h, w = heatmap.shape[0], heatmap.shape[1]
   ul = [int(mu_x - tmp_size), int(mu_y - tmp_size)]
   br = [int(mu_x + tmp_size + 1), int(mu_y + tmp_size + 1)]
   if ul[0] >= h or ul[1] >= w or br[0] < 0 or br[1] < 0:

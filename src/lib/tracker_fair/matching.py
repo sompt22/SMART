@@ -15,7 +15,10 @@ def linear_assignment(cost_matrix, thresh):
     matches = [[ix, mx] for ix, mx in enumerate(x) if mx >= 0]
     unmatched_a = np.where(x < 0)[0]
     unmatched_b = np.where(y < 0)[0]
-    matches = np.asarray(matches)
+    if len(matches) == 0:
+        matches = np.empty((0, 2), dtype=int)
+    else:
+        matches = np.asarray(matches)
     return matches, unmatched_a, unmatched_b
 
 
@@ -35,8 +38,8 @@ def greedy_assignment(dist):
 def merge_matches(m1, m2, shape):
     """Merge two sets of matches via sparse matrix multiplication."""
     O, P, Q = shape
-    m1 = np.asarray(m1)
-    m2 = np.asarray(m2)
+    m1 = np.asarray(m1).reshape(-1, 2) if len(m1) > 0 else np.empty((0, 2), dtype=int)
+    m2 = np.asarray(m2).reshape(-1, 2) if len(m2) > 0 else np.empty((0, 2), dtype=int)
     M1 = scipy.sparse.coo_matrix((np.ones(len(m1)), (m1[:, 0], m1[:, 1])), shape=(O, P))
     M2 = scipy.sparse.coo_matrix((np.ones(len(m2)), (m2[:, 0], m2[:, 1])), shape=(P, Q))
     mask = M1 * M2
@@ -209,7 +212,6 @@ def embedding_filter(ret, embedding_history, smoothing_window):
 
         if len(embedding_history[tid]) > 0:
             smoothed_embedding = np.mean(embedding_history[tid], axis=0)
-            embedding_history[tid][-1] = smoothed_embedding
         else:
             smoothed_embedding = emb['embedding']
         ret[i]['embedding'] = smoothed_embedding

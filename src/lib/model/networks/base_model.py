@@ -14,6 +14,7 @@ def fill_fc_weights(layers):
 class BaseModel(nn.Module):
     def __init__(self, heads, head_convs, num_stacks, last_channel, opt=None):
         super(BaseModel, self).__init__()
+        self.opt = opt
         if opt is not None and opt.head_kernel != 3:
           print('Using head kernel:', opt.head_kernel)
           head_kernel = opt.head_kernel
@@ -39,14 +40,14 @@ class BaseModel(nn.Module):
                   layers.extend([c, nn.ReLU(inplace=True)])
               layers.append(out)
               fc = nn.Sequential(*layers)
-              if 'hm' in head:
+              if 'hm' in head and opt is not None:
                 fc[-1].bias.data.fill_(opt.prior_bias)
               else:
                 fill_fc_weights(fc)
             else:
               fc = nn.Conv2d(last_channel, classes,
                   kernel_size=1, stride=1, padding=0, bias=True)
-              if 'hm' in head:
+              if 'hm' in head and opt is not None:
                 fc.bias.data.fill_(opt.prior_bias)
               else:
                 fill_fc_weights(fc)

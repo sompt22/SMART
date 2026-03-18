@@ -64,7 +64,7 @@ def initialize_and_freeze_model_components(opt, model):
             if component:
                 set_requires_grad(component, requires_grad=False)
                 set_bn_eval(component)  # Optionally freeze BN stats in these parts
-                print(f"{component} frozen! \n")
+                print(f"{component_name} frozen! \n")
                 
     return model
 
@@ -95,14 +95,24 @@ def main(opt):
   print(f'Unique track ids: {opt.nID}')
   print('Creating model...')
   model = create_model(opt.arch, opt.heads, opt.head_conv, opt=opt)
-  model = initialize_and_freeze_model_components(opt, model)
-  #print(model)
-  #optimizer = get_optimizer(opt, model)
-  optimizer = get_optimizer(opt, filter(lambda p: p.requires_grad, model.parameters()))
   start_epoch = 0
+  # Load model checkpoint BEFORE freezing so freeze is not overwritten
   if opt.load_model != '':
+    # Temporarily create optimizer with all params to load checkpoint
+    optimizer = get_optimizer(opt, model.parameters())
     model, optimizer, start_epoch = load_model(
       model, opt.load_model, opt, optimizer)
+  model = initialize_and_freeze_model_components(opt, model)
+  # Re-create optimizer with only unfrozen parameters
+  optimizer = get_optimizer(opt, filter(lambda p: p.requires_grad, model.parameters()))
+  if opt.load_model != '' and opt.resume:
+    # Restore learning rate from checkpoint epoch
+    start_lr = opt.lr
+    for step in opt.lr_step:
+      if start_epoch >= step:
+        start_lr *= 0.1
+    for param_group in optimizer.param_groups:
+      param_group['lr'] = start_lr
 
   trainer = Trainer(opt, model, optimizer)
   trainer.set_device(opt.gpus, opt.chunk_sizes, opt.device)

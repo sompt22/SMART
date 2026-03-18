@@ -61,10 +61,12 @@ def _update_kps_with_hm(
       r = kps[:, :, :, 0:1].max(dim=1, keepdim=True)[0]
       b = kps[:, :, :, 1:2].max(dim=1, keepdim=True)[0]
       margin = 0.25
-      l = l - (r - l) * margin
-      r = r + (r - l) * margin
-      t = t - (b - t) * margin
-      b = b + (b - t) * margin
+      w_margin = (r - l) * margin
+      h_margin = (b - t) * margin
+      l = l - w_margin
+      r = r + w_margin
+      t = t - h_margin
+      b = b + h_margin
       mask = (hm_kps[..., 0:1] < l) + (hm_kps[..., 0:1] > r) + \
               (hm_kps[..., 1:2] < t) + (hm_kps[..., 1:2] > b) + mask
       # sc = (kps[:, :, :, :].max(dim=1, keepdim=True) - kps[:, :, :, :].min(dim=1))
@@ -86,7 +88,7 @@ def generic_decode(output, K=100, opt=None):
   if not ('hm' in output):
     return {}
 
-  if opt.zero_tracking:
+  if opt is not None and getattr(opt, 'zero_tracking', False):
     output['tracking'] *= 0
   
   heat = output['hm']

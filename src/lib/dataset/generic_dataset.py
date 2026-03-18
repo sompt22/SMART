@@ -168,6 +168,8 @@ class GenericDataset(data.Dataset):
     ann_ids = coco.getAnnIds(imgIds=[img_id])
     anns = copy.deepcopy(coco.loadAnns(ids=ann_ids))
     img = cv2.imread(img_path)
+    if img is None:
+      raise FileNotFoundError('Failed to read image: {}'.format(img_path))
     return img, anns, img_info, img_path
 
   def _load_data(self, index):
@@ -198,6 +200,9 @@ class GenericDataset(data.Dataset):
             for img_info in img_infos \
             if (img_info['frame_id'] - frame_id) == 0 and \
             (not ('sensor_id' in img_info) or img_info['sensor_id'] == sensor_id)]
+    if len(img_ids) == 0:
+      # Fallback: use the current frame's own data
+      img_ids = [(img_infos[0]['id'], img_infos[0]['frame_id'])]
     rand_id = np.random.choice(len(img_ids))
     img_id, pre_frame_id = img_ids[rand_id]
     frame_dist = abs(frame_id - pre_frame_id)
@@ -214,7 +219,7 @@ class GenericDataset(data.Dataset):
     pre_cts, track_ids, embedding_vectors = [], [], []
     for ann in anns:
       cls_id = int(self.cat_ids[ann['category_id']])
-      if cls_id > self.opt.num_classes or cls_id <= -99 or \
+      if cls_id > self.opt.num_classes or cls_id <= -999 or \
          ('iscrowd' in ann and ann['iscrowd'] > 0):
         continue
       bbox = self._coco_box_to_bbox(ann['bbox'])
@@ -244,7 +249,7 @@ class GenericDataset(data.Dataset):
           pre_cts.append(ct0 / down_ratio)
 
         track_ids.append(ann['track_id'] if 'track_id' in ann else -1)
-        if self.opt.know_dist_weight:
+        if self.opt.know_dist_weight and 'embedding' in ann:
           embedding_vectors.append(ann['embedding'])
         if return_hm:
           draw_umich_gaussian(pre_hm[0], ct_int, radius, k=conf)
@@ -622,7 +627,7 @@ class GenericDataset(data.Dataset):
                 'hps': np.zeros((1, 17, 2), dtype=np.float32),
                 'tid': np.array([-1], dtype=np.int64),
                 'vectors': np.zeros((1, self.opt.embedding_dim), dtype=np.float32),}
-    gt_det = {k: np.array(gt_det[k], dtype=np.float32) for k in gt_det}
+    gt_det = {k: np.array(gt_det[k], dtype=np.int64 if k == 'tid' else np.float32) for k in gt_det}
     return gt_det
 
   def fake_video_data(self):

@@ -144,7 +144,8 @@ class Trainer(object):
     self.optimizer = optimizer
     self.loss_stats, self.loss = self._get_losses(opt)
     self.model_with_loss = ModelWithLoss(model, self.loss)
-    self.optimizer.add_param_group({'params': self.loss.parameters()})
+    if self.optimizer is not None:
+      self.optimizer.add_param_group({'params': self.loss.parameters()})
 
   def set_device(self, gpus, chunk_sizes, device):
     if len(gpus) > 1:
@@ -167,59 +168,61 @@ class Trainer(object):
       if len(self.opt.gpus) > 1:
         model_with_loss = self.model_with_loss.module
       model_with_loss.eval()
-      torch.cuda.empty_cache()
-      torch.set_grad_enabled(False)
+      if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     opt = self.opt
     results = {}
     data_time, batch_time = AverageMeter(), AverageMeter()
     avg_loss_stats = {l: AverageMeter() for l in self.loss_stats \
-                      if l == 'tot' or opt.weights[l] > 0}
+                      if l == 'tot' or l in opt.weights and opt.weights[l] > 0 \
+                      or l == 'embedding'}
     num_iters = len(data_loader) if opt.num_iters < 0 else opt.num_iters
     bar = Bar('{}/{}'.format(opt.task, opt.exp_id), max=num_iters)
     end = time.time()
-    for iter_id, batch in enumerate(data_loader):
-      if iter_id >= num_iters:
-        break
-      data_time.update(time.time() - end)
 
-      for k in batch:
-        if k != 'meta':
-          batch[k] = batch[k].to(device=opt.device, non_blocking=True)   
-      output, loss, loss_stats = model_with_loss(batch)
-      loss = loss.mean()
-      if phase == 'train':
-        self.optimizer.zero_grad(set_to_none=True)
-        loss.backward()
-        nn.utils.clip_grad_norm_(
-          self.model_with_loss.parameters(), max_norm=10.0)
-        self.optimizer.step()
-      batch_time.update(time.time() - end)
-      end = time.time()
+    grad_context = torch.no_grad() if phase != 'train' else torch.enable_grad()
+    with grad_context:
+      for iter_id, batch in enumerate(data_loader):
+        if iter_id >= num_iters:
+          break
+        data_time.update(time.time() - end)
 
-      Bar.suffix = '{phase}: [{0}][{1}/{2}]|Tot: {total:} |ETA: {eta:} '.format(
-        epoch, iter_id, num_iters, phase=phase,
-        total=bar.elapsed_td, eta=bar.eta_td)
-      for l in avg_loss_stats:
-        avg_loss_stats[l].update(
-          loss_stats[l].mean().item(), batch['image'].size(0))
-        Bar.suffix = Bar.suffix + '|{} {:.4f} '.format(l, avg_loss_stats[l].avg)
-      Bar.suffix = Bar.suffix + '|Data {dt.val:.3f}s({dt.avg:.3f}s) ' \
-        '|Net {bt.avg:.3f}s'.format(dt=data_time, bt=batch_time)
-      if opt.print_iter > 0: # If not using progress bar
-        if iter_id % opt.print_iter == 0:
-          print('{}/{}| {}'.format(opt.task, opt.exp_id, Bar.suffix)) 
-      else:
-        bar.next()
-      
-      if opt.debug > 0:
-        self.debug(batch, output, iter_id, dataset=data_loader.dataset)
-      
-      del output, loss, loss_stats
-    
+        for k in batch:
+          if k != 'meta':
+            batch[k] = batch[k].to(device=opt.device, non_blocking=True)
+        output, loss, loss_stats = model_with_loss(batch)
+        loss = loss.mean()
+        if phase == 'train':
+          self.optimizer.zero_grad(set_to_none=True)
+          loss.backward()
+          nn.utils.clip_grad_norm_(
+            self.model_with_loss.parameters(), max_norm=10.0)
+          self.optimizer.step()
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        Bar.suffix = '{phase}: [{0}][{1}/{2}]|Tot: {total:} |ETA: {eta:} '.format(
+          epoch, iter_id, num_iters, phase=phase,
+          total=bar.elapsed_td, eta=bar.eta_td)
+        for l in avg_loss_stats:
+          avg_loss_stats[l].update(
+            loss_stats[l].mean().item(), batch['image'].size(0))
+          Bar.suffix = Bar.suffix + '|{} {:.4f} '.format(l, avg_loss_stats[l].avg)
+        Bar.suffix = Bar.suffix + '|Data {dt.val:.3f}s({dt.avg:.3f}s) ' \
+          '|Net {bt.avg:.3f}s'.format(dt=data_time, bt=batch_time)
+        if opt.print_iter > 0: # If not using progress bar
+          if iter_id % opt.print_iter == 0:
+            print('{}/{}| {}'.format(opt.task, opt.exp_id, Bar.suffix))
+        else:
+          bar.next()
+
+        if opt.debug > 0:
+          self.debug(batch, output, iter_id, dataset=data_loader.dataset)
+
+        del output, loss, loss_stats
+
     bar.finish()
-    if phase != 'train':
-      torch.set_grad_enabled(True)
     ret = {k: v.avg for k, v in avg_loss_stats.items()}
     ret['time'] = bar.elapsed_td.total_seconds() / 60.
     return ret, results
