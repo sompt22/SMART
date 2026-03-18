@@ -49,21 +49,21 @@ def merge_matches(m1, m2, shape):
 
 # ==================== Distance / Cost Functions ====================
 
-def embedding_distance(tracks, detections, metric='cosine'):
-    """Compute cosine distance between track and detection embedding arrays.
+def embedding_distance(detections, tracks, metric='cosine'):
+    """Compute cosine distance between detection and track embedding arrays.
 
     Args:
-        tracks: np.ndarray of shape (M, embedding_dim)
         detections: np.ndarray of shape (N, embedding_dim)
+        tracks: np.ndarray of shape (M, embedding_dim)
         metric: distance metric for cdist (default: 'cosine')
 
     Returns:
-        cost_matrix: np.ndarray of shape (M, N), values in [0, 1] for cosine
+        cost_matrix: np.ndarray of shape (N, M), values in [0, 1] for cosine
     """
-    cost_matrix = np.zeros((len(tracks), len(detections)), dtype=np.float64)
+    cost_matrix = np.zeros((len(detections), len(tracks)), dtype=np.float64)
     if cost_matrix.size == 0:
         return cost_matrix
-    cost_matrix = np.maximum(0.0, cdist(tracks, detections, metric))
+    cost_matrix = np.maximum(0.0, cdist(detections, tracks, metric))
     cost_matrix = np.nan_to_num(cost_matrix, nan=1.0, posinf=1.0, neginf=0.0)
     return cost_matrix
 

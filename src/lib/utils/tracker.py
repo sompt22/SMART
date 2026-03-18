@@ -63,6 +63,19 @@ class Tracker:
             self.frm_count += 1
             return []
 
+        # Early return: no detections, age out all tracks
+        if N == 0:
+            tracks_to_remove = []
+            for track in self.tracks:
+                if track.age < self.max_age:
+                    track.increment_age()
+                else:
+                    tracks_to_remove.append(track)
+            for track in tracks_to_remove:
+                self.tracks.remove(track)
+            self.frm_count += 1
+            return []
+
         if self.tracking_task and all('tracking' in det for det in detections):
             dets = np.array([det['ct'] + det['tracking'] for det in detections], np.float32) # N x 2
         else:
@@ -82,7 +95,7 @@ class Tracker:
             self.oper.write(str(lse_dist) + "\n")
 
         ## Gating for box size with adaptive threshold
-        min_gate = 400.0  # minimum gate value (20px^2 equivalent)
+        min_gate = self.opt.min_gate
         effective_track_size = np.maximum(track_size, min_gate)
         effective_item_size = np.maximum(item_size, min_gate)
         invalid = ((lse_dist > effective_track_size.reshape(1, M)) + \
@@ -104,7 +117,7 @@ class Tracker:
             tracks_emb = np.asarray([track.embedding for track in self.tracks], np.float32)  # M x embedding_dim
             cos_sim = matching.embedding_distance(dets_emb, tracks_emb)
             gated_cos_sim = cos_sim + invalid * 1.0
-            matched_indices, unmatched_dets, unmatched_tracks = matching.linear_assignment(gated_cos_sim, thresh=0.65)
+            matched_indices, unmatched_dets, unmatched_tracks = matching.linear_assignment(gated_cos_sim, thresh=self.opt.embedding_thresh)
             if self.opt.debug == 4:
                 self.oper.write("Cosine Similarity Matrix: \n")
                 self.oper.write(str(cos_sim) + "\n")
@@ -126,7 +139,7 @@ class Tracker:
                         if item_cat[d_idx] != track_cat[t_idx]:
                             iou_cost[di, ti] = 1.0
 
-                iou_matched, iou_unmatched_dets, iou_unmatched_tracks = matching.linear_assignment(iou_cost, thresh=0.7)
+                iou_matched, iou_unmatched_dets, iou_unmatched_tracks = matching.linear_assignment(iou_cost, thresh=self.opt.iou_thresh)
 
                 if self.opt.debug == 4:
                     self.oper.write("Stage 2 IoU Cost Matrix: \n")
@@ -166,7 +179,7 @@ class Tracker:
             new_tracking = detections[m[0]]['tracking'] if self.tracking_task else None
             new_embedding = detections[m[0]]['embedding'] if self.embedding_task else None
             # Only update embedding for high-confidence matches to avoid noisy updates
-            if new_embedding is not None and detections[m[0]]['score'] < 0.3:
+            if new_embedding is not None and detections[m[0]]['score'] < self.opt.emb_min_score:
                 new_embedding = None
             track.update(new_bbox=detections[m[0]]['bbox'],\
                         new_score=detections[m[0]]['score'],\

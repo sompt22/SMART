@@ -227,6 +227,14 @@ class opts(object):
     self.parser.add_argument('--zero_tracking', action='store_true')
     self.parser.add_argument('--hungarian', action='store_true')
     self.parser.add_argument('--max_age', type=int, default=30)
+    self.parser.add_argument('--embedding_thresh', type=float, default=0.65,
+      help='Cosine similarity threshold for embedding-based association (Stage 1)')
+    self.parser.add_argument('--iou_thresh', type=float, default=0.7,
+      help='IoU cost threshold for IoU-based association fallback (Stage 2)')
+    self.parser.add_argument('--emb_min_score', type=float, default=0.3,
+      help='Minimum detection score to update a track embedding')
+    self.parser.add_argument('--min_gate', type=float, default=400.0,
+      help='Minimum spatial gate value (pixels^2) for LSE-based gating')
 
 
     # loss
