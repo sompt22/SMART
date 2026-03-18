@@ -110,7 +110,7 @@ class Tracker:
 
         # === Stage 1: Embedding-based association ===
         embeddings_valid = self.embedding_task and \
-            all(det['embedding'] is not None for det in detections) and \
+            all('embedding' in det and det['embedding'] is not None for det in detections) and \
             all(track.embedding is not None for track in self.tracks)
         if embeddings_valid:
             dets_emb = np.asarray([det['embedding'] for det in detections], np.float32)      # N x embedding_dim
@@ -161,7 +161,8 @@ class Tracker:
             if self.opt.hungarian:
                 item_score = np.array([item['score'] for item in detections], np.float32) # N
                 lse_dist[lse_dist > 1e18] = 1e18
-                matched_indices = linear_assignment_sk(lse_dist)
+                row_ind, col_ind = linear_assignment_sk(lse_dist)
+                matched_indices = np.column_stack((row_ind, col_ind)) if len(row_ind) > 0 else np.empty((0, 2), dtype=int)
             else:
                 matched_indices = matching.greedy_assignment(copy.deepcopy(lse_dist))
             unmatched_dets = [d for d in range(dets.shape[0]) if not (d in matched_indices[:, 0])]
@@ -243,8 +244,8 @@ class Tracker:
 
     def create_new_track(self, detection):
         """Create a new track for a detection."""
-        init_tracking = detection['tracking'] if 'tracking' in self.opt.task else None
-        init_embedding = detection['embedding'] if 'embedding' in self.opt.task else None
+        init_tracking = detection.get('tracking') if self.tracking_task else None
+        init_embedding = detection.get('embedding') if self.embedding_task else None
         self.next_track_id += 1
         self.tracks.append(Track(track_id=self.next_track_id, \
                                  initial_bbox=detection['bbox'],\

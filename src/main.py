@@ -92,7 +92,25 @@ def main(opt):
     os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpus_str
   opt.device = torch.device('cuda' if opt.gpus[0] >= 0 else 'cpu')
   logger = Logger(opt)
-  print(f'Unique track ids: {opt.nID}')
+
+  # Load datasets BEFORE model creation so opt.nID is updated from dataset's total_id.
+  # This ensures the embedding classifier is sized correctly.
+  print('Setting up train data...')
+  print("Data is shuffling?:", opt.noshuffle)
+  train_dataset = Dataset(opt, 'train')
+  train_loader = torch.utils.data.DataLoader(
+      train_dataset, batch_size=opt.batch_size, shuffle=opt.noshuffle,
+      num_workers=opt.num_workers, pin_memory=True, drop_last=True
+  )
+
+  val_loader = None
+  if opt.val_intervals < opt.num_epochs or opt.test:
+    print('Setting up validation data...')
+    val_loader = torch.utils.data.DataLoader(
+      Dataset(opt, 'val'), batch_size=1, shuffle=False, num_workers=1,
+      pin_memory=True)
+
+  print(f'Unique track ids (nID): {opt.nID}')
   print('Creating model...')
   model = create_model(opt.arch, opt.heads, opt.head_conv, opt=opt)
   start_epoch = 0
@@ -116,26 +134,11 @@ def main(opt):
 
   trainer = Trainer(opt, model, optimizer)
   trainer.set_device(opt.gpus, opt.chunk_sizes, opt.device)
-  
-  if opt.val_intervals < opt.num_epochs or opt.test:
-    print('Setting up validation data...')
-    val_loader = torch.utils.data.DataLoader(
-      Dataset(opt, 'val'), batch_size=1, shuffle=False, num_workers=1,
-      pin_memory=True)
 
-    if opt.test:
-      _, preds = trainer.val(0, val_loader)
-      val_loader.dataset.run_eval(preds, opt.save_dir)
-      return
-    print(f'Unique track ids after val load: {opt.nID}')
-
-  print('Setting up train data...')
-  print("Data is shuffling?:", opt.noshuffle)
-  train_loader = torch.utils.data.DataLoader(
-      Dataset(opt, 'train'), batch_size=opt.batch_size, shuffle=opt.noshuffle,
-      num_workers=opt.num_workers, pin_memory=True, drop_last=True
-  )
-  print(f'Unique track ids after train load: {opt.nID}')
+  if opt.test and val_loader is not None:
+    _, preds = trainer.val(0, val_loader)
+    val_loader.dataset.run_eval(preds, opt.save_dir)
+    return
 
   print('Starting training...')
   for epoch in range(start_epoch + 1, opt.num_epochs + 1):
@@ -146,8 +149,8 @@ def main(opt):
       logger.scalar_summary('train_{}'.format(k), v, epoch)
       logger.write('{} {:8f} | '.format(k, v))
     logger.write('\n')
-    if opt.val_intervals > 0 and epoch % opt.val_intervals == 0:
-      save_model(os.path.join(opt.save_dir, 'model_{}.pth'.format(mark)), 
+    if opt.val_intervals > 0 and epoch % opt.val_intervals == 0 and val_loader is not None:
+      save_model(os.path.join(opt.save_dir, 'model_{}.pth'.format(mark)),
                  epoch, model, optimizer)
       with torch.no_grad():
         log_dict_val, preds = trainer.val(epoch, val_loader)

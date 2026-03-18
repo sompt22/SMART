@@ -72,7 +72,13 @@ class GenericDataset(data.Dataset):
         for image in self.coco.dataset['images']:
           self.video_to_images[image['video_id']].append(image)
       if 'total_id' in self.coco.dataset:
-        print('==> Track id start from %d' % self.coco.dataset['total_id'])
+        total_id = self.coco.dataset['total_id']
+        print('==> Total unique track IDs in dataset: %d' % total_id)
+        if total_id > opt.nID:
+          print('WARNING: Dataset has %d unique track IDs but nID is %d. '
+                'Track IDs >= nID will be excluded from embedding loss. '
+                'Set --nID %d to use all IDs.' % (total_id, opt.nID, total_id))
+          opt.nID = total_id
       
       self.img_dir = img_dir
 
