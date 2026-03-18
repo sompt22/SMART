@@ -239,6 +239,10 @@ class JDETracker(object):
         self.lost_stracks = []  # type: list[STrack]
         self.removed_stracks = []  # type: list[STrack]
 
+        # Reset global track ID counter so each JDETracker instance starts
+        # IDs from 1, preventing cross-sequence ID leakage.
+        BaseTrack.reset_count()
+
         self.frame_id = 0
         self.det_thresh = opt.conf_thres
         self.buffer_size = max(1, int(frame_rate / 30.0 * opt.track_buffer))
@@ -433,6 +437,18 @@ class JDETracker(object):
         logger.debug('Removed: {}'.format([track.track_id for track in removed_stracks]))
 
         return output_stracks
+
+    def reset(self):
+        """Reset tracker state for a new sequence.
+
+        Clears all track lists, resets the frame counter, and resets the
+        global BaseTrack ID counter so IDs start from 1 for the new sequence.
+        """
+        self.tracked_stracks = []
+        self.lost_stracks = []
+        self.removed_stracks = []
+        self.frame_id = 0
+        BaseTrack.reset_count()
 
 
 def joint_stracks(tlista, tlistb):

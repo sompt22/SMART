@@ -46,8 +46,11 @@ class Track(object):
     def predict(self):
         """Run Kalman filter prediction step."""
         mean_state = self.mean.copy()
-        if self.age > 0:
-            # Zero out velocity components for lost tracks (reduce drift)
+        # Zero velocity only after the track has been unmatched for several
+        # frames (half of max_age).  Zeroing on the very first missed frame
+        # (age == 1) was too aggressive and caused position drift during short
+        # occlusions by discarding valid motion information immediately.
+        if self.age >= max(1, self.max_age // 2):
             mean_state[7] = 0
         self.mean, self.covariance = self.shared_kalman.predict(mean_state, self.covariance)
         # Update bbox and center from KF predicted state

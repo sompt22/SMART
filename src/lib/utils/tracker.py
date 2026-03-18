@@ -116,9 +116,11 @@ class Tracker:
             all('embedding' in det and det['embedding'] is not None for det in detections) and \
             all(track.embedding is not None for track in self.tracks)
         if embeddings_valid:
-            dets_emb = np.asarray([det['embedding'] for det in detections], np.float32)      # N x embedding_dim
             tracks_emb = np.asarray([track.embedding for track in self.tracks], np.float32)  # M x embedding_dim
-            cos_sim = matching.embedding_distance(dets_emb, tracks_emb)
+            dets_emb = np.asarray([det['embedding'] for det in detections], np.float32)      # N x embedding_dim
+            # embedding_distance(tracks, dets) → shape (M, N): rows=tracks, cols=dets.
+            # Transpose to (N, M) so rows=dets, cols=tracks, matching invalid's layout.
+            cos_sim = matching.embedding_distance(tracks_emb, dets_emb).T  # (N, M)
             gated_cos_sim = cos_sim + invalid * 1.0
             matched_indices, unmatched_dets, unmatched_tracks = matching.linear_assignment(gated_cos_sim, thresh=self.opt.embedding_thresh)
             if self.opt.debug == 4:

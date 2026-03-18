@@ -245,7 +245,7 @@ class EmbeddingVectorLoss(nn.Module):
           vector_target = target[mask > 0].contiguous()
           vector_loss = self.mse_loss(vector_head_normalized, vector_target)
         else:
-          vector_loss = torch.tensor(0.0).to(output.device)
+          vector_loss = torch.tensor(0.0, device=output.device, requires_grad=True)
         return vector_loss
       
 class EmbeddingVectorCosineSimilarityLoss(nn.Module):
@@ -266,6 +266,6 @@ class EmbeddingVectorCosineSimilarityLoss(nn.Module):
             cosine_similarity = F.cosine_similarity(vector_head_normalized, vector_target_normalized, dim=1)
             vector_loss = 1 - cosine_similarity.mean()
         else:
-            vector_loss = torch.tensor(0.0).to(output.device)
+            vector_loss = torch.tensor(0.0, device=output.device, requires_grad=True)
 
         return vector_loss

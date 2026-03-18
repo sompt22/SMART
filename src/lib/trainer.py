@@ -101,11 +101,14 @@ class GenericLoss(torch.nn.Module):
       if 'embedding' in self.opt.heads:
         if lambda_class:
           classification_loss += self.IDLoss(output['embedding'], batch['tid_mask'], batch['ind'], batch['tid']) / opt.num_stacks
-          #print('Classification loss: ', classification_loss)
         if lambda_vector:
           vector_loss += self.cosineSimloss(
             output['embedding'], batch['vectors_mask'], batch['ind'], batch['vectors']) / opt.num_stacks
-          #print('Vector loss: ', vector_loss)
+        # classification_loss and vector_loss accumulate the per-stack
+        # contributions (each divided by num_stacks). On the final stack
+        # iteration their sum equals the desired cross-stack average, so
+        # overwriting losses['embedding'] each iteration is correct: the last
+        # assignment holds the fully-accumulated value.
         losses['embedding'] = lambda_class * classification_loss + lambda_vector * vector_loss
 
     losses['tot'] = 0
