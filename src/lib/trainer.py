@@ -175,8 +175,7 @@ class Trainer(object):
     results = {}
     data_time, batch_time = AverageMeter(), AverageMeter()
     avg_loss_stats = {l: AverageMeter() for l in self.loss_stats \
-                      if l == 'tot' or l in opt.weights and opt.weights[l] > 0 \
-                      or l == 'embedding'}
+                      if l == 'tot' or l in opt.heads}
     num_iters = len(data_loader) if opt.num_iters < 0 else opt.num_iters
     bar = Bar('{}/{}'.format(opt.task, opt.exp_id), max=num_iters)
     end = time.time()

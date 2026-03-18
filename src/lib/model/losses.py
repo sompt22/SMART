@@ -208,6 +208,14 @@ class EmbeddingLoss(nn.Module):
         # Gather the target IDs for the masked positions
         id_target = target[mask > 0]
 
+        # Clamp track IDs to valid range [0, nID-1] to prevent index-out-of-bounds
+        # IDs outside range (e.g. from dataset annotations exceeding nID) are set to -1 (ignored by CrossEntropyLoss)
+        valid_id_mask = (id_target >= 0) & (id_target < self.nID)
+        if not valid_id_mask.any():
+            return torch.tensor(0.0, device=output.device, requires_grad=True)
+        id_head = id_head[valid_id_mask]
+        id_target = id_target[valid_id_mask]
+
         # Compute the classification output using the classifier
         id_output = self.classifier(id_head).contiguous()
 
