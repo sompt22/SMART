@@ -8,17 +8,59 @@ import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
-from models import *
-from models.decode import mot_decode
-from models.model import create_model, load_model
-from models.utils import _tranpose_and_gather_feat
-from tracking_utils.kalman_filter import KalmanFilter
-from tracking_utils.log import logger
-from tracking_utils.utils import *
+from model.model import create_model, load_model
+from model.decode import generic_decode
+from model.utils import _tranpose_and_gather_feat, _nms, _topk
+from utils.kalman_filter import KalmanFilter
 from utils.image import get_affine_transform
 from utils.post_process import ctdet_post_process
 
-from tracker import matching
+from tracker_fair import matching
+
+import logging
+logger = logging.getLogger(__name__)
+
+
+def mot_decode(heat, wh, reg=None, ltrb=False, K=100):
+    """Decode heatmap to detections for MOT (multi-object tracking).
+
+    Returns:
+        dets: tensor of shape (batch, K, 6) with [x1, y1, x2, y2, score, cls] or
+              (batch, K, 5+) depending on ltrb
+        inds: tensor of shape (batch, K) with flattened indices
+    """
+    batch, cat, height, width = heat.size()
+    heat = _nms(heat)
+    scores, inds, clses, ys, xs = _topk(heat, K=K)
+
+    if reg is not None:
+        reg = _tranpose_and_gather_feat(reg, inds)
+        reg = reg.view(batch, K, 2)
+        xs = xs.view(batch, K, 1) + reg[:, :, 0:1]
+        ys = ys.view(batch, K, 1) + reg[:, :, 1:2]
+    else:
+        xs = xs.view(batch, K, 1) + 0.5
+        ys = ys.view(batch, K, 1) + 0.5
+
+    wh = _tranpose_and_gather_feat(wh, inds)
+    wh = wh.view(batch, K, 2)
+
+    clses = clses.view(batch, K, 1).float()
+    scores = scores.view(batch, K, 1)
+
+    if ltrb:
+        bboxes = torch.cat([xs - wh[..., 0:1],
+                            ys - wh[..., 1:2],
+                            xs + wh[..., 0:1],
+                            ys + wh[..., 1:2]], dim=2)
+    else:
+        bboxes = torch.cat([xs - wh[..., 0:1] / 2,
+                            ys - wh[..., 1:2] / 2,
+                            xs + wh[..., 0:1] / 2,
+                            ys + wh[..., 1:2] / 2], dim=2)
+
+    dets = torch.cat([bboxes, scores, clses], dim=2)
+    return dets, inds
 
 from .basetrack import BaseTrack, TrackState
 
@@ -303,7 +345,7 @@ class JDETracker(object):
         #for strack in strack_pool:
             #strack.predict()
         STrack.multi_predict(strack_pool)
-        dists = matching.embedding_distance(detections, strack_pool)
+        dists = matching.embedding_distance(strack_pool, detections)
         #dists = matching.iou_distance(strack_pool, detections)
         dists = matching.fuse_motion(self.kalman_filter, dists, strack_pool, detections)
         matches, u_track, u_detection = matching.linear_assignment(dists, thresh=0.4)

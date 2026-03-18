@@ -52,21 +52,36 @@ def merge_matches(m1, m2, shape):
 
 # ==================== Distance / Cost Functions ====================
 
-def embedding_distance(detections, tracks, metric='cosine'):
-    """Compute cosine distance between detection and track embedding arrays.
+def embedding_distance(tracks_or_feats, detections_or_feats, metric='cosine'):
+    """Compute cosine distance between track and detection embeddings.
+
+    Accepts either Track/STrack objects (with .smooth_feat or .curr_feat) or raw np.ndarray.
 
     Args:
-        detections: np.ndarray of shape (N, embedding_dim)
-        tracks: np.ndarray of shape (M, embedding_dim)
+        tracks_or_feats: list of Track objects or np.ndarray (N, embedding_dim)
+        detections_or_feats: list of Detection objects or np.ndarray (M, embedding_dim)
         metric: distance metric for cdist (default: 'cosine')
 
     Returns:
         cost_matrix: np.ndarray of shape (N, M), values in [0, 1] for cosine
     """
-    cost_matrix = np.zeros((len(detections), len(tracks)), dtype=np.float64)
+    cost_matrix = np.zeros((len(tracks_or_feats), len(detections_or_feats)), dtype=np.float64)
     if cost_matrix.size == 0:
         return cost_matrix
-    cost_matrix = np.maximum(0.0, cdist(detections, tracks, metric))
+    # Extract features from objects if needed
+    if hasattr(tracks_or_feats[0], 'smooth_feat'):
+        track_features = np.asarray([t.smooth_feat for t in tracks_or_feats], dtype=np.float64)
+    elif hasattr(tracks_or_feats[0], 'curr_feat'):
+        track_features = np.asarray([t.curr_feat for t in tracks_or_feats], dtype=np.float64)
+    else:
+        track_features = np.asarray(tracks_or_feats, dtype=np.float64)
+    if hasattr(detections_or_feats[0], 'smooth_feat'):
+        det_features = np.asarray([d.smooth_feat for d in detections_or_feats], dtype=np.float64)
+    elif hasattr(detections_or_feats[0], 'curr_feat'):
+        det_features = np.asarray([d.curr_feat for d in detections_or_feats], dtype=np.float64)
+    else:
+        det_features = np.asarray(detections_or_feats, dtype=np.float64)
+    cost_matrix = np.maximum(0.0, cdist(track_features, det_features, metric))
     cost_matrix = np.nan_to_num(cost_matrix, nan=1.0, posinf=1.0, neginf=0.0)
     return cost_matrix
 
