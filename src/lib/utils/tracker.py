@@ -45,6 +45,9 @@ class Tracker:
         self.next_track_id = 0
         self.tracks = []
         self.frm_count = 0
+        # Re-open debug file if it was previously closed via close()
+        if self.opt.debug == 4:
+            self.initialize_files()
 
     def step(self, detections, public_det=None):
         N = len(detections) # Number of Detections
@@ -238,7 +241,7 @@ class Tracker:
         return ret
 
     def close(self):
-        if self.opt.debug == 4 and hasattr(self, 'oper'):
+        if self.opt.debug == 4 and hasattr(self, 'oper') and not self.oper.closed:
             self.oper.flush()
             self.oper.close()
 

@@ -15,7 +15,7 @@ from model.data_parallel import DataParallel
 from utils.utils import AverageMeter
 
 from model.losses import FastFocalLoss, RegWeightedL1Loss
-from model.losses import BinRotLoss, WeightedBCELoss, EmbeddingLoss, EmbeddingVectorLoss, EmbeddingVectorCosineSimilarityLoss
+from model.losses import BinRotLoss, WeightedBCELoss, EmbeddingLoss, EmbeddingVectorCosineSimilarityLoss
 from model.decode import generic_decode
 from model.utils import _sigmoid, flip_tensor, flip_lr_off, flip_lr, _tranpose_and_gather_feat
 from utils.debugger import Debugger
@@ -27,7 +27,6 @@ class GenericLoss(torch.nn.Module):
     self.crit = FastFocalLoss(opt=opt)
     self.crit_reg = RegWeightedL1Loss()
     self.IDLoss = EmbeddingLoss(opt)
-    self.crit_vector = EmbeddingVectorLoss(opt)
     self.cosineSimloss = EmbeddingVectorCosineSimilarityLoss(opt)
     if 'rot' in opt.heads:
       self.crit_rot = BinRotLoss()

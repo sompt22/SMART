@@ -73,7 +73,7 @@ def load_model(model, model_path, opt, optimizer=None):
   # resume optimizer parameters
   if optimizer is not None and opt.resume:
     if 'optimizer' in checkpoint:
-      # optimizer.load_state_dict(checkpoint['optimizer'])
+      optimizer.load_state_dict(checkpoint['optimizer'])
       start_epoch = checkpoint['epoch']
       start_lr = opt.lr
       for step in opt.lr_step:

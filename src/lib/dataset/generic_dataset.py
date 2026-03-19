@@ -474,9 +474,10 @@ class GenericDataset(data.Dataset):
     gt_det['clses'].append(cls_id - 1)
     gt_det['cts'].append(ct)
 
+    ann_track_id = ann.get('track_id', -1)
     if 'tracking' in self.opt.heads:
-      if ann['track_id'] in track_ids:
-        pre_ct = pre_cts[track_ids.index(ann['track_id'])]
+      if ann_track_id in track_ids:
+        pre_ct = pre_cts[track_ids.index(ann_track_id)]
         ret['tracking_mask'][k] = 1
         ret['tracking'][k] = pre_ct - ct_int
         gt_det['tracking'].append(ret['tracking'][k])
@@ -484,15 +485,15 @@ class GenericDataset(data.Dataset):
         gt_det['tracking'].append(np.zeros(2, np.float32))
 
     if 'embedding' in self.opt.heads:
-      if ann['track_id'] in track_ids:
+      if ann_track_id in track_ids:
         ret['tid_mask'][k] = 1
-        ret['tid'][k] = ann['track_id'] 
+        ret['tid'][k] = ann_track_id
         gt_det['tid'].append(ret['tid'][k])
       else:
         gt_det['tid'].append(np.array(-1,dtype=np.int64))
-          
+
       if self.opt.know_dist_weight:
-        if 'embedding' in ann and ann['track_id'] in track_ids:
+        if 'embedding' in ann and ann_track_id in track_ids:
           ret['vectors_mask'][k] = 1
           ret['vectors'][k] = ann['embedding']
           gt_det['vectors'].append(ret['vectors'][k])
