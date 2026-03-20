@@ -18,8 +18,12 @@ from .base_model import BaseModel
 try:
     from .DCNv2.dcn_v2 import DCN
 except ImportError:
-    print('import DCN failed')
-    DCN = None
+    try:
+        from .DCNv2.dcn_v2_mps import DCN
+        print('[DCN] Compiled extension not found — using MPS/CPU-compatible DCN (torchvision)')
+    except ImportError:
+        print('[DCN] WARNING: No DCN implementation found. DLA-34 will fail at runtime.')
+        DCN = None
 
 
 BN_MOMENTUM = 0.1

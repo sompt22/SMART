@@ -90,7 +90,12 @@ def main(opt):
   print(opt)
   if not opt.not_set_cuda_env:
     os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpus_str
-  opt.device = torch.device('cuda' if opt.gpus[0] >= 0 else 'cpu')
+  if opt.gpus[0] >= 0 and torch.cuda.is_available():
+    opt.device = torch.device('cuda')
+  elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+    opt.device = torch.device('mps')
+  else:
+    opt.device = torch.device('cpu')
   logger = Logger(opt)
 
   # Load datasets BEFORE model creation so opt.nID is updated from dataset's total_id.

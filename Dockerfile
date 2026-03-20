@@ -193,3 +193,104 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["--help"]
+
+
+# ============================================================
+# Stage 3: CPU-only / arm64 (Apple Silicon via Docker Desktop)
+# ============================================================
+# Build:
+#   docker build --target cpu --platform linux/arm64 -t smart:cpu .
+# Run (M1 Mac):
+#   docker run --platform linux/arm64 \
+#     -v $(pwd)/data:/data \
+#     -v $(pwd)/exp:/workspace/SMART/exp \
+#     smart:cpu train tracking,embedding --gpus -1 ...
+# ============================================================
+FROM python:3.10-slim AS cpu
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/workspace/SMART/src/lib:/workspace/SMART/src \
+    PYTHONHASHSEED=0
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        g++ \
+        gcc \
+        git \
+        wget \
+        curl \
+        ca-certificates \
+        libglib2.0-0 \
+        libsm6 \
+        libxext6 \
+        libxrender-dev \
+        libgomp1 \
+        libgl1 \
+        ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# CPU-only PyTorch (works on arm64 / linux/amd64)
+RUN pip install --no-cache-dir \
+    torch==2.1.2 \
+    torchvision==0.16.2 \
+    --index-url https://download.pytorch.org/whl/cpu
+
+RUN pip install --no-cache-dir "numpy==1.23.5" "Cython==0.29.34"
+
+RUN pip install --no-cache-dir \
+    "opencv-python-headless==4.8.0.74" \
+    "numba==0.56.4" \
+    "llvmlite==0.39.1" \
+    "scipy==1.10.1" \
+    "matplotlib==3.7.1" \
+    "Pillow==9.4.0" \
+    "easydict==1.10" \
+    "pyyaml==6.0" \
+    "yacs==0.1.8" \
+    "progress==1.6" \
+    "motmetrics" \
+    "openpyxl" \
+    "pyquaternion==0.9.9" \
+    "pyrsistent" \
+    "tensorboardX" \
+    "fvcore==0.1.5.post20221221" \
+    "iopath==0.1.10" \
+    "portalocker==2.7.0" \
+    "tabulate==0.9.0" \
+    "termcolor==2.2.0" \
+    "packaging==23.0" \
+    "pycocotools==2.0" \
+    "lapx>=0.5.2" \
+    "cython-bbox"
+
+WORKDIR /workspace/SMART
+COPY . .
+
+# Build External NMS (Cython, no CUDA)
+RUN cd src/lib/external && python setup.py build_ext --inplace
+
+# Build DCNv2 CPU-only (FORCE_CUDA=0 skips CUDA sources)
+RUN cd src/lib/model/networks/DCNv2 && \
+    rm -rf build/ *.egg-info *.so && \
+    FORCE_CUDA=0 python setup.py build_ext --inplace && \
+    echo "=== DCNv2 CPU build OK ==="
+
+# Verify: compiled extension OR MPS shim
+RUN python -c " \
+import sys; sys.path.insert(0, 'src'); sys.path.insert(0, 'src/lib'); \
+try: \
+    from model.networks.DCNv2.dcn_v2 import DCN; print('DCNv2 compiled CPU OK') \
+except ImportError: \
+    from model.networks.DCNv2.dcn_v2_mps import DCN; print('DCN MPS/CPU shim OK')"
+
+# Smoke-test
+RUN python -c "import torch; print('torch:', torch.__version__, '| MPS built:', torch.backends.mps.is_built())"
+
+COPY docker-entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+WORKDIR /workspace/SMART/src
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["--help"]

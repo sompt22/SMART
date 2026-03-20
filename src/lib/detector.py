@@ -24,8 +24,10 @@ from dataset.dataset_factory import get_dataset
 
 class Detector(object):
   def __init__(self, opt):
-    if opt.gpus[0] >= 0:
+    if opt.gpus[0] >= 0 and torch.cuda.is_available():
       opt.device = torch.device('cuda')
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+      opt.device = torch.device('mps')
     else:
       opt.device = torch.device('cpu')
     
