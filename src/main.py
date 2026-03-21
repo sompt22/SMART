@@ -64,7 +64,7 @@ def initialize_and_freeze_model_components(opt, model):
             if component:
                 set_requires_grad(component, requires_grad=False)
                 set_bn_eval(component)  # Optionally freeze BN stats in these parts
-                print(f"{component} frozen! \n")
+                print(f"{component_name} frozen! \n")
                 
     return model
 
@@ -90,42 +90,60 @@ def main(opt):
   print(opt)
   if not opt.not_set_cuda_env:
     os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpus_str
-  opt.device = torch.device('cuda' if opt.gpus[0] >= 0 else 'cpu')
+  if opt.gpus[0] >= 0 and torch.cuda.is_available():
+    opt.device = torch.device('cuda')
+  elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+    opt.device = torch.device('mps')
+  else:
+    opt.device = torch.device('cpu')
   logger = Logger(opt)
-  print(f'Unique track ids: {opt.nID}')
-  print('Creating model...')
-  model = create_model(opt.arch, opt.heads, opt.head_conv, opt=opt)
-  model = initialize_and_freeze_model_components(opt, model)
-  #print(model)
-  #optimizer = get_optimizer(opt, model)
-  optimizer = get_optimizer(opt, filter(lambda p: p.requires_grad, model.parameters()))
-  start_epoch = 0
-  if opt.load_model != '':
-    model, optimizer, start_epoch = load_model(
-      model, opt.load_model, opt, optimizer)
 
-  trainer = Trainer(opt, model, optimizer)
-  trainer.set_device(opt.gpus, opt.chunk_sizes, opt.device)
-  
+  # Load datasets BEFORE model creation so opt.nID is updated from dataset's total_id.
+  # This ensures the embedding classifier is sized correctly.
+  print('Setting up train data...')
+  print("Data is shuffling?:", opt.noshuffle)
+  train_dataset = Dataset(opt, 'train')
+  train_loader = torch.utils.data.DataLoader(
+      train_dataset, batch_size=opt.batch_size, shuffle=opt.noshuffle,
+      num_workers=opt.num_workers, pin_memory=True, drop_last=True
+  )
+
+  val_loader = None
   if opt.val_intervals < opt.num_epochs or opt.test:
     print('Setting up validation data...')
     val_loader = torch.utils.data.DataLoader(
       Dataset(opt, 'val'), batch_size=1, shuffle=False, num_workers=1,
       pin_memory=True)
 
-    if opt.test:
-      _, preds = trainer.val(0, val_loader)
-      val_loader.dataset.run_eval(preds, opt.save_dir)
-      return
-    print(f'Unique track ids after val load: {opt.nID}')
+  print(f'Unique track ids (nID): {opt.nID}')
+  print('Creating model...')
+  model = create_model(opt.arch, opt.heads, opt.head_conv, opt=opt)
+  start_epoch = 0
+  # Load model checkpoint BEFORE freezing so freeze is not overwritten
+  if opt.load_model != '':
+    # Temporarily create optimizer with all params to load checkpoint
+    optimizer = get_optimizer(opt, model.parameters())
+    model, optimizer, start_epoch = load_model(
+      model, opt.load_model, opt, optimizer)
+  model = initialize_and_freeze_model_components(opt, model)
+  # Re-create optimizer with only unfrozen parameters
+  optimizer = get_optimizer(opt, filter(lambda p: p.requires_grad, model.parameters()))
+  if opt.load_model != '' and opt.resume:
+    # Restore learning rate from checkpoint epoch
+    start_lr = opt.lr
+    for step in opt.lr_step:
+      if start_epoch >= step:
+        start_lr *= 0.1
+    for param_group in optimizer.param_groups:
+      param_group['lr'] = start_lr
 
-  print('Setting up train data...')
-  print("Data is shuffling?:", opt.noshuffle)
-  train_loader = torch.utils.data.DataLoader(
-      Dataset(opt, 'train'), batch_size=opt.batch_size, shuffle=opt.noshuffle,
-      num_workers=opt.num_workers, pin_memory=True, drop_last=True
-  )
-  print(f'Unique track ids after train load: {opt.nID}')
+  trainer = Trainer(opt, model, optimizer)
+  trainer.set_device(opt.gpus, opt.chunk_sizes, opt.device)
+
+  if opt.test and val_loader is not None:
+    _, preds = trainer.val(0, val_loader)
+    val_loader.dataset.run_eval(preds, opt.save_dir)
+    return
 
   print('Starting training...')
   for epoch in range(start_epoch + 1, opt.num_epochs + 1):
@@ -136,8 +154,8 @@ def main(opt):
       logger.scalar_summary('train_{}'.format(k), v, epoch)
       logger.write('{} {:8f} | '.format(k, v))
     logger.write('\n')
-    if opt.val_intervals > 0 and epoch % opt.val_intervals == 0:
-      save_model(os.path.join(opt.save_dir, 'model_{}.pth'.format(mark)), 
+    if opt.val_intervals > 0 and epoch % opt.val_intervals == 0 and val_loader is not None:
+      save_model(os.path.join(opt.save_dir, 'model_{}.pth'.format(mark)),
                  epoch, model, optimizer)
       with torch.no_grad():
         log_dict_val, preds = trainer.val(epoch, val_loader)

@@ -15,7 +15,10 @@ def linear_assignment(cost_matrix, thresh):
     matches = [[ix, mx] for ix, mx in enumerate(x) if mx >= 0]
     unmatched_a = np.where(x < 0)[0]
     unmatched_b = np.where(y < 0)[0]
-    matches = np.asarray(matches)
+    if len(matches) == 0:
+        matches = np.empty((0, 2), dtype=int)
+    else:
+        matches = np.asarray(matches)
     return matches, unmatched_a, unmatched_b
 
 
@@ -35,8 +38,8 @@ def greedy_assignment(dist):
 def merge_matches(m1, m2, shape):
     """Merge two sets of matches via sparse matrix multiplication."""
     O, P, Q = shape
-    m1 = np.asarray(m1)
-    m2 = np.asarray(m2)
+    m1 = np.asarray(m1).reshape(-1, 2) if len(m1) > 0 else np.empty((0, 2), dtype=int)
+    m2 = np.asarray(m2).reshape(-1, 2) if len(m2) > 0 else np.empty((0, 2), dtype=int)
     M1 = scipy.sparse.coo_matrix((np.ones(len(m1)), (m1[:, 0], m1[:, 1])), shape=(O, P))
     M2 = scipy.sparse.coo_matrix((np.ones(len(m2)), (m2[:, 0], m2[:, 1])), shape=(P, Q))
     mask = M1 * M2
@@ -49,21 +52,36 @@ def merge_matches(m1, m2, shape):
 
 # ==================== Distance / Cost Functions ====================
 
-def embedding_distance(tracks, detections, metric='cosine'):
-    """Compute cosine distance between track and detection embedding arrays.
+def embedding_distance(tracks_or_feats, detections_or_feats, metric='cosine'):
+    """Compute cosine distance between track and detection embeddings.
+
+    Accepts either Track/STrack objects (with .smooth_feat or .curr_feat) or raw np.ndarray.
 
     Args:
-        tracks: np.ndarray of shape (M, embedding_dim)
-        detections: np.ndarray of shape (N, embedding_dim)
+        tracks_or_feats: list of Track objects or np.ndarray (N, embedding_dim)
+        detections_or_feats: list of Detection objects or np.ndarray (M, embedding_dim)
         metric: distance metric for cdist (default: 'cosine')
 
     Returns:
-        cost_matrix: np.ndarray of shape (M, N), values in [0, 1] for cosine
+        cost_matrix: np.ndarray of shape (N, M), values in [0, 1] for cosine
     """
-    cost_matrix = np.zeros((len(tracks), len(detections)), dtype=np.float64)
+    cost_matrix = np.zeros((len(tracks_or_feats), len(detections_or_feats)), dtype=np.float64)
     if cost_matrix.size == 0:
         return cost_matrix
-    cost_matrix = np.maximum(0.0, cdist(tracks, detections, metric))
+    # Extract features from objects if needed
+    if hasattr(tracks_or_feats[0], 'smooth_feat'):
+        track_features = np.asarray([t.smooth_feat for t in tracks_or_feats], dtype=np.float64)
+    elif hasattr(tracks_or_feats[0], 'curr_feat'):
+        track_features = np.asarray([t.curr_feat for t in tracks_or_feats], dtype=np.float64)
+    else:
+        track_features = np.asarray(tracks_or_feats, dtype=np.float64)
+    if hasattr(detections_or_feats[0], 'smooth_feat'):
+        det_features = np.asarray([d.smooth_feat for d in detections_or_feats], dtype=np.float64)
+    elif hasattr(detections_or_feats[0], 'curr_feat'):
+        det_features = np.asarray([d.curr_feat for d in detections_or_feats], dtype=np.float64)
+    else:
+        det_features = np.asarray(detections_or_feats, dtype=np.float64)
+    cost_matrix = np.maximum(0.0, cdist(track_features, det_features, metric))
     cost_matrix = np.nan_to_num(cost_matrix, nan=1.0, posinf=1.0, neginf=0.0)
     return cost_matrix
 
@@ -209,7 +227,6 @@ def embedding_filter(ret, embedding_history, smoothing_window):
 
         if len(embedding_history[tid]) > 0:
             smoothed_embedding = np.mean(embedding_history[tid], axis=0)
-            embedding_history[tid][-1] = smoothed_embedding
         else:
             smoothed_embedding = emb['embedding']
         ret[i]['embedding'] = smoothed_embedding

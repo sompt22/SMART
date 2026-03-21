@@ -46,8 +46,11 @@ class Track(object):
     def predict(self):
         """Run Kalman filter prediction step."""
         mean_state = self.mean.copy()
-        if self.age > 0:
-            # Zero out velocity components for lost tracks (reduce drift)
+        # Zero velocity only after the track has been unmatched for several
+        # frames (half of max_age).  Zeroing on the very first missed frame
+        # (age == 1) was too aggressive and caused position drift during short
+        # occlusions by discarding valid motion information immediately.
+        if self.age >= max(1, self.max_age // 2):
             mean_state[7] = 0
         self.mean, self.covariance = self.shared_kalman.predict(mean_state, self.covariance)
         # Update bbox and center from KF predicted state
@@ -88,13 +91,17 @@ class Track(object):
             self.active = 0
 
     def smooth_fcn(self, history, new_value):
-        """Smooth the current vector using exponential moving average (EMA)."""
-        alpha = 0.9  # Weight for the new value
+        """Smooth the current vector using exponential moving average (EMA).
+
+        alpha weights the historical embedding, matching the convention used in
+        FairMOT (high alpha = slow-changing, stable embedding representation).
+        """
+        alpha = 0.9  # Weight for historical embedding (retain 90% of history)
         if len(history) == 0:
             history.append(new_value.copy())
             return new_value
-        # EMA: emphasize recent embeddings over old ones
-        smoothed = alpha * new_value + (1 - alpha) * history[-1]
+        # EMA: stable historical representation with gradual new-observation updates
+        smoothed = alpha * history[-1] + (1 - alpha) * new_value
         history.append(new_value.copy())  # Store original, not smoothed
         if len(history) > self.smoothing_window:
             history.pop(0)

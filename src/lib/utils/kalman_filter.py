@@ -103,16 +103,17 @@ class KalmanFilter(object):
             state. Unobserved velocities are initialized to 0 mean.
 
         """
+        height = max(mean[3], 1e-4)
         std_pos = [
-            self._std_weight_position * mean[3],
-            self._std_weight_position * mean[3],
+            self._std_weight_position * height,
+            self._std_weight_position * height,
             1e-2,
-            self._std_weight_position * mean[3]]
+            self._std_weight_position * height]
         std_vel = [
-            self._std_weight_velocity * mean[3],
-            self._std_weight_velocity * mean[3],
+            self._std_weight_velocity * height,
+            self._std_weight_velocity * height,
             1e-5,
-            self._std_weight_velocity * mean[3]]
+            self._std_weight_velocity * height]
         motion_cov = np.diag(np.square(np.r_[std_pos, std_vel]))
 
         #mean = np.dot(self._motion_mat, mean)
@@ -139,11 +140,12 @@ class KalmanFilter(object):
             estimate.
 
         """
+        height = max(mean[3], 1e-4)
         std = [
-            self._std_weight_position * mean[3],
-            self._std_weight_position * mean[3],
+            self._std_weight_position * height,
+            self._std_weight_position * height,
             1e-1,
-            self._std_weight_position * mean[3]]
+            self._std_weight_position * height]
         innovation_cov = np.diag(np.square(std))
 
         mean = np.dot(self._update_mat, mean)
@@ -212,8 +214,14 @@ class KalmanFilter(object):
         """
         projected_mean, projected_cov = self.project(mean, covariance)
 
-        chol_factor, lower = scipy.linalg.cho_factor(
-            projected_cov, lower=True, check_finite=False)
+        try:
+            chol_factor, lower = scipy.linalg.cho_factor(
+                projected_cov, lower=True, check_finite=False)
+        except np.linalg.LinAlgError:
+            # Covariance is not positive-definite; add regularization
+            projected_cov += np.eye(projected_cov.shape[0]) * 1e-4
+            chol_factor, lower = scipy.linalg.cho_factor(
+                projected_cov, lower=True, check_finite=False)
         kalman_gain = scipy.linalg.cho_solve(
             (chol_factor, lower), np.dot(covariance, self._update_mat.T).T,
             check_finite=False).T
@@ -259,10 +267,14 @@ class KalmanFilter(object):
         if metric == 'gaussian':
             return np.sum(d * d, axis=1)
         elif metric == 'maha':
-            cholesky_factor = np.linalg.cholesky(covariance)
+            try:
+                cholesky_factor = np.linalg.cholesky(covariance)
+            except np.linalg.LinAlgError:
+                # Covariance is not positive-definite; add regularization
+                covariance = covariance + np.eye(covariance.shape[0]) * 1e-4
+                cholesky_factor = np.linalg.cholesky(covariance)
             z = scipy.linalg.solve_triangular(
-                cholesky_factor, d.T, lower=True, check_finite=False,
-                overwrite_b=True)
+                cholesky_factor, d.T.copy(), lower=True, check_finite=False)
             squared_maha = np.sum(z * z, axis=0)
             return squared_maha
         else:

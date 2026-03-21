@@ -8,17 +8,59 @@ import cv2
 import numpy as np
 import torch
 import torch.nn.functional as F
-from models import *
-from models.decode import mot_decode
-from models.model import create_model, load_model
-from models.utils import _tranpose_and_gather_feat
-from tracking_utils.kalman_filter import KalmanFilter
-from tracking_utils.log import logger
-from tracking_utils.utils import *
+from model.model import create_model, load_model
+from model.decode import generic_decode
+from model.utils import _tranpose_and_gather_feat, _nms, _topk
+from utils.kalman_filter import KalmanFilter
 from utils.image import get_affine_transform
 from utils.post_process import ctdet_post_process
 
-from tracker import matching
+from tracker_fair import matching
+
+import logging
+logger = logging.getLogger(__name__)
+
+
+def mot_decode(heat, wh, reg=None, ltrb=False, K=100):
+    """Decode heatmap to detections for MOT (multi-object tracking).
+
+    Returns:
+        dets: tensor of shape (batch, K, 6) with [x1, y1, x2, y2, score, cls] or
+              (batch, K, 5+) depending on ltrb
+        inds: tensor of shape (batch, K) with flattened indices
+    """
+    batch, cat, height, width = heat.size()
+    heat = _nms(heat)
+    scores, inds, clses, ys, xs = _topk(heat, K=K)
+
+    if reg is not None:
+        reg = _tranpose_and_gather_feat(reg, inds)
+        reg = reg.view(batch, K, 2)
+        xs = xs.view(batch, K, 1) + reg[:, :, 0:1]
+        ys = ys.view(batch, K, 1) + reg[:, :, 1:2]
+    else:
+        xs = xs.view(batch, K, 1) + 0.5
+        ys = ys.view(batch, K, 1) + 0.5
+
+    wh = _tranpose_and_gather_feat(wh, inds)
+    wh = wh.view(batch, K, 2)
+
+    clses = clses.view(batch, K, 1).float()
+    scores = scores.view(batch, K, 1)
+
+    if ltrb:
+        bboxes = torch.cat([xs - wh[..., 0:1],
+                            ys - wh[..., 1:2],
+                            xs + wh[..., 0:1],
+                            ys + wh[..., 1:2]], dim=2)
+    else:
+        bboxes = torch.cat([xs - wh[..., 0:1] / 2,
+                            ys - wh[..., 1:2] / 2,
+                            xs + wh[..., 0:1] / 2,
+                            ys + wh[..., 1:2] / 2], dim=2)
+
+    dets = torch.cat([bboxes, scores, clses], dim=2)
+    return dets, inds
 
 from .basetrack import BaseTrack, TrackState
 
@@ -28,7 +70,7 @@ class STrack(BaseTrack):
     def __init__(self, tlwh, score, temp_feat, buffer_size=30):
 
         # wait activate
-        self._tlwh = np.asarray(tlwh, dtype=np.float)
+        self._tlwh = np.asarray(tlwh, dtype=np.float64)
         self.kalman_filter = None
         self.mean, self.covariance = None, None
         self.is_activated = False
@@ -42,16 +84,23 @@ class STrack(BaseTrack):
         self.alpha = 0.9
 
     def update_features(self, feat):
-        feat /= np.linalg.norm(feat)
+        feat = feat.copy()
+        norm = np.linalg.norm(feat)
+        if norm > 1e-6:
+            feat /= norm
         self.curr_feat = feat
         if self.smooth_feat is None:
             self.smooth_feat = feat
         else:
             self.smooth_feat = self.alpha * self.smooth_feat + (1 - self.alpha) * feat
         self.features.append(feat)
-        self.smooth_feat /= np.linalg.norm(self.smooth_feat)
+        smooth_norm = np.linalg.norm(self.smooth_feat)
+        if smooth_norm > 1e-6:
+            self.smooth_feat /= smooth_norm
 
     def predict(self):
+        if self.mean is None:
+            return
         mean_state = self.mean.copy()
         if self.state != TrackState.Tracked:
             mean_state[7] = 0
@@ -146,7 +195,10 @@ class STrack(BaseTrack):
         """
         ret = np.asarray(tlwh).copy()
         ret[:2] += ret[2:] / 2
-        ret[2] /= ret[3]
+        if ret[3] > 0:
+            ret[2] /= ret[3]
+        else:
+            ret[2] = 0
         return ret
 
     def to_xyah(self):
@@ -171,8 +223,10 @@ class STrack(BaseTrack):
 class JDETracker(object):
     def __init__(self, opt, frame_rate=30):
         self.opt = opt
-        if opt.gpus[0] >= 0:
+        if opt.gpus[0] >= 0 and torch.cuda.is_available():
             opt.device = torch.device('cuda')
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            opt.device = torch.device('mps')
         else:
             opt.device = torch.device('cpu')
         print('Creating model...')
@@ -185,9 +239,13 @@ class JDETracker(object):
         self.lost_stracks = []  # type: list[STrack]
         self.removed_stracks = []  # type: list[STrack]
 
+        # Reset global track ID counter so each JDETracker instance starts
+        # IDs from 1, preventing cross-sequence ID leakage.
+        BaseTrack.reset_count()
+
         self.frame_id = 0
         self.det_thresh = opt.conf_thres
-        self.buffer_size = int(frame_rate / 30.0 * opt.track_buffer)
+        self.buffer_size = max(1, int(frame_rate / 30.0 * opt.track_buffer))
         self.max_time_lost = self.buffer_size
         self.max_per_image = opt.K
         self.mean = np.array(opt.mean, dtype=np.float32).reshape(1, 1, 3)
@@ -364,6 +422,10 @@ class JDETracker(object):
         self.lost_stracks.extend(lost_stracks)
         self.lost_stracks = sub_stracks(self.lost_stracks, self.removed_stracks)
         self.removed_stracks.extend(removed_stracks)
+        # Prune old removed tracks to prevent unbounded memory growth
+        max_removed = self.buffer_size * 10
+        if len(self.removed_stracks) > max_removed:
+            self.removed_stracks = self.removed_stracks[-max_removed:]
         self.tracked_stracks, self.lost_stracks = remove_duplicate_stracks(self.tracked_stracks, self.lost_stracks)
         # get scores of lost tracks
         output_stracks = [track for track in self.tracked_stracks if track.is_activated]
@@ -375,6 +437,18 @@ class JDETracker(object):
         logger.debug('Removed: {}'.format([track.track_id for track in removed_stracks]))
 
         return output_stracks
+
+    def reset(self):
+        """Reset tracker state for a new sequence.
+
+        Clears all track lists, resets the frame counter, and resets the
+        global BaseTrack ID counter so IDs start from 1 for the new sequence.
+        """
+        self.tracked_stracks = []
+        self.lost_stracks = []
+        self.removed_stracks = []
+        self.frame_id = 0
+        BaseTrack.reset_count()
 
 
 def joint_stracks(tlista, tlistb):

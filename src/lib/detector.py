@@ -24,8 +24,10 @@ from dataset.dataset_factory import get_dataset
 
 class Detector(object):
   def __init__(self, opt):
-    if opt.gpus[0] >= 0:
+    if opt.gpus[0] >= 0 and torch.cuda.is_available():
       opt.device = torch.device('cuda')
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+      opt.device = torch.device('mps')
     else:
       opt.device = torch.device('cpu')
     
@@ -53,7 +55,9 @@ class Detector(object):
     self.debugger = Debugger(opt=opt, dataset=self.trained_dataset)
 
 
-  def run(self, image_or_path_or_tensor, meta={}):
+  def run(self, image_or_path_or_tensor, meta=None):
+    if meta is None:
+      meta = {}
     load_time, pre_time, net_time, dec_time, post_time = 0, 0, 0, 0, 0
     merge_time, track_time, tot_time, display_time = 0, 0, 0, 0
     self.debugger.clear()
@@ -65,6 +69,9 @@ class Detector(object):
       image = image_or_path_or_tensor
     elif isinstance(image_or_path_or_tensor, str):
       image = cv2.imread(image_or_path_or_tensor)
+      if image is None:
+        raise FileNotFoundError(
+          'Failed to read image: {}'.format(image_or_path_or_tensor))
     else:
       image = image_or_path_or_tensor['image'][0].numpy()
       pre_processed_images = image_or_path_or_tensor
@@ -137,7 +144,8 @@ class Detector(object):
 
     # merge multi-scale testing results
     results = self.merge_outputs(detections)
-    torch.cuda.synchronize()
+    if torch.cuda.is_available():
+      torch.cuda.synchronize()
     end_time = time.time()
     merge_time += end_time - post_process_time
     
@@ -205,11 +213,13 @@ class Detector(object):
     return resized_image, c, s, inp_width, inp_height, height, width
 
 
-  def pre_process(self, image, scale, input_meta={}):
+  def pre_process(self, image, scale, input_meta=None):
     '''
     Crop, resize, and normalize image. Gather meta data for post processing 
       and tracking.
     '''
+    if input_meta is None:
+      input_meta = {}
     resized_image, c, s, inp_width, inp_height, height, width = \
       self._transform_scale(image)
     trans_input = get_affine_transform(c, s, 0, [inp_width, inp_height])
@@ -336,17 +346,20 @@ class Detector(object):
   def process(self, images, pre_images=None, pre_hms=None,
     pre_inds=None, return_time=False):
     with torch.no_grad():
-      torch.cuda.synchronize()
+      if torch.cuda.is_available():
+        torch.cuda.synchronize()
       output = self.model(images, pre_images, pre_hms)[-1]
       output = self._sigmoid_output(output)
       output.update({'pre_inds': pre_inds})
       if self.opt.flip_test:
         output = self._flip_output(output)
-      torch.cuda.synchronize()
+      if torch.cuda.is_available():
+        torch.cuda.synchronize()
       forward_time = time.time()
-      
+
       dets = generic_decode(output, K=self.opt.K, opt=self.opt)
-      torch.cuda.synchronize()
+      if torch.cuda.is_available():
+        torch.cuda.synchronize()
       for k in dets:
         dets[k] = dets[k].detach().cpu().numpy()
     if return_time:
@@ -415,7 +428,7 @@ class Detector(object):
         if ('bbox' in item):
           sc = item['score'] if self.opt.demo == '' or \
             not ('tracking_id' in item) else item['tracking_id']
-          sc = item['tracking_id'] if self.opt.show_track_color else sc
+          sc = item['tracking_id'] if self.opt.show_track_color and 'tracking_id' in item else sc
           
           debugger.add_coco_bbox(
             item['bbox'], item['class'] - 1, sc, img_id='generic')

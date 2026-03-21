@@ -1,0 +1,48 @@
+name: smart_m1
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      # PyTorch with MPS support (Apple Silicon native)
+      # Install from https://pytorch.org — do NOT use conda pytorch channel for M1
+      - torch>=2.1.0
+      - torchvision>=0.16.0   # deform_conv2d MPS support added in 0.16
+      - torchaudio>=2.1.0
+
+      # Core scientific
+      - numpy==1.23.5
+      - scipy
+      - matplotlib
+
+      # Computer vision
+      - opencv-python
+      - Pillow
+
+      # Build tools
+      - Cython
+      - setuptools>=67.0
+
+      # MOT / tracking utilities
+      - cython-bbox
+      - motmetrics
+      - lapx>=0.5.2
+
+      # Deep learning utilities
+      - numba
+      - tensorboardX
+      - fvcore
+      - pycocotools
+      - progress
+      - easydict
+      - pyyaml
+      - yacs
+
+      # Data / IO
+      - openpyxl
+      - pyquaternion
+      - pyrsistent

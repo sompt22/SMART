@@ -34,7 +34,7 @@ class PrefetchDataset(torch.utils.data.Dataset):
     img_path = os.path.join(self.img_dir, img_info['file_name'])
     image = cv2.imread(img_path)
     images, meta = {}, {}
-    for scale in opt.test_scales:
+    for scale in self.opt.test_scales:
       input_meta = {}
       calib = img_info['calib'] if 'calib' in img_info \
         else self.get_default_calib(image.shape[1], image.shape[0])
@@ -131,7 +131,8 @@ def prefetch_test(opt):
   dataset.run_eval(results, opt.save_dir)
 
 def test(opt):
-  os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpus_str
+  if not opt.not_set_cuda_env:
+    os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpus_str
 
   Dataset = dataset_factory[opt.test_dataset]
   opt = opts().update_dataset_info_and_set_heads(opt, Dataset)
@@ -142,6 +143,7 @@ def test(opt):
   dataset = Dataset(opt, split)
   detector = Detector(opt)
 
+  load_results = {}
   if opt.load_results != '': # load results in json
     with open(opt.load_results, 'r') as f:
       load_results = json.load(f)
@@ -185,7 +187,7 @@ def _to_list(results):
   for img_id in results:
     for t in range(len(results[img_id])):
       for k in results[img_id][t]:
-        if isinstance(results[img_id][t][k], (np.ndarray, np.float32)):
+        if isinstance(results[img_id][t][k], (np.ndarray, np.generic)):
           results[img_id][t][k] = results[img_id][t][k].tolist()
   return results
 

@@ -17,7 +17,7 @@ import math
 
 def _only_neg_loss(pred, gt):
   gt = torch.pow(1 - gt, 4)
-  neg_loss = torch.log(1 - pred) * torch.pow(pred, 2) * gt
+  neg_loss = torch.log(torch.clamp(1 - pred, min=1e-12)) * torch.pow(pred, 2) * gt
   return neg_loss.sum()
 
 
@@ -41,7 +41,7 @@ class FastFocalLoss(nn.Module):
     pos_pred_pix = _tranpose_and_gather_feat(out, ind) # B x M x C
     pos_pred = pos_pred_pix.gather(2, cat.unsqueeze(2)) # B x M
     num_pos = mask.sum()
-    pos_loss = torch.log(pos_pred) * torch.pow(1 - pos_pred, 2) * \
+    pos_loss = torch.log(torch.clamp(pos_pred, min=1e-12)) * torch.pow(1 - pos_pred, 2) * \
                mask.unsqueeze(2)
     pos_loss = pos_loss.sum()
     if num_pos == 0:
@@ -88,8 +88,12 @@ def compute_res_loss(output, target):
 
 def compute_bin_loss(output, target, mask):
     mask = mask.expand_as(output)
-    output = output * mask.float()
-    return F.cross_entropy(output, target, reduction='mean')
+    loss = F.cross_entropy(output, target, reduction='none')
+    masked_loss = loss * mask[:, 0].float()
+    num_valid = mask[:, 0].float().sum()
+    if num_valid > 0:
+        return masked_loss.sum() / num_valid
+    return masked_loss.sum()
 
 def compute_rot_loss(output, target_bin, target_res, mask):
     # output: (B, 128, 8) [bin1_cls[0], bin1_cls[1], bin1_sin, bin1_cos, 
@@ -147,7 +151,8 @@ class TripletLoss(nn.Module):
             targets: ground truth labels with shape (num_classes)
         """
         n = inputs.size(0)
-        # inputs = 1. * inputs / (torch.norm(inputs, 2, dim=-1, keepdim=True).expand_as(inputs) + 1e-12)
+        if n < 2:
+            return torch.tensor(0.0, device=inputs.device, requires_grad=True)
         # Compute pairwise distance, replace by the official when merged
         dist = torch.pow(inputs, 2).sum(dim=1, keepdim=True).expand(n, n)
         dist = dist + dist.t()
@@ -157,8 +162,14 @@ class TripletLoss(nn.Module):
         mask = targets.expand(n, n).eq(targets.expand(n, n).t())
         dist_ap, dist_an = [], []
         for i in range(n):
-            dist_ap.append(dist[i][mask[i]].max().unsqueeze(0))
-            dist_an.append(dist[i][mask[i] == 0].min().unsqueeze(0))
+            pos_dists = dist[i][mask[i]]
+            neg_dists = dist[i][mask[i] == 0]
+            if pos_dists.numel() == 0 or neg_dists.numel() == 0:
+                continue
+            dist_ap.append(pos_dists.max().unsqueeze(0))
+            dist_an.append(neg_dists.min().unsqueeze(0))
+        if len(dist_ap) == 0:
+            return torch.tensor(0.0, device=inputs.device, requires_grad=True)
         dist_ap = torch.cat(dist_ap)
         dist_an = torch.cat(dist_an)
         # Compute ranking hinge loss
@@ -172,7 +183,7 @@ class TripletLoss(nn.Module):
 class EmbeddingLoss(nn.Module):
     def __init__(self, opt):
         super(EmbeddingLoss, self).__init__()
-        self.nID = opt.nID
+        self.nID = max(opt.nID, 2)
         self.emb_scale = math.sqrt(2) * math.log(self.nID - 1)
         self.emb_dim = opt.embedding_dim
         self.classifier = nn.Linear(self.emb_dim, self.nID)
@@ -188,17 +199,28 @@ class EmbeddingLoss(nn.Module):
         # Gather the embeddings for the specified indices and apply the mask
         id_head = _tranpose_and_gather_feat(output, ind)  # Assuming output is directly passed
         id_head = id_head[mask > 0].contiguous()
+
+        if id_head.size(0) == 0:
+            return torch.tensor(0.0, device=output.device, requires_grad=True)
+
         id_head = self.emb_scale * F.normalize(id_head, dim=1)
 
         # Gather the target IDs for the masked positions
         id_target = target[mask > 0]
 
+        # Clamp track IDs to valid range [0, nID-1] to prevent index-out-of-bounds
+        # IDs outside range (e.g. from dataset annotations exceeding nID) are set to -1 (ignored by CrossEntropyLoss)
+        valid_id_mask = (id_target >= 0) & (id_target < self.nID)
+        if not valid_id_mask.any():
+            return torch.tensor(0.0, device=output.device, requires_grad=True)
+        id_head = id_head[valid_id_mask]
+        id_target = id_target[valid_id_mask]
+
         # Compute the classification output using the classifier
         id_output = self.classifier(id_head).contiguous()
-            
+
         # Compute the classification loss
         if self.opt.embedding_loss == 'focal':
-            # Assuming `sigmoid_focal_loss_jit` function is defined elsewhere
             id_target_one_hot = id_output.new_zeros((id_head.size(0), self.nID)).scatter_(
                 1, id_target.long().view(-1, 1), 1)
             classification_loss = sigmoid_focal_loss_jit(
@@ -213,7 +235,7 @@ class EmbeddingVectorLoss(nn.Module):
         super(EmbeddingVectorLoss, self).__init__()
         self.mse_loss = nn.MSELoss()
         self.opt = opt
-        self.emb_scale = math.sqrt(2) * math.log(self.opt.nID - 1)
+        self.emb_scale = math.sqrt(2) * math.log(max(self.opt.nID, 2) - 1)
 
     def forward(self, output, mask, ind, target):
         vector_head = _tranpose_and_gather_feat(output, ind)
@@ -223,14 +245,14 @@ class EmbeddingVectorLoss(nn.Module):
           vector_target = target[mask > 0].contiguous()
           vector_loss = self.mse_loss(vector_head_normalized, vector_target)
         else:
-          vector_loss = torch.tensor(0.0).to(output.device)
+          vector_loss = torch.tensor(0.0, device=output.device, requires_grad=True)
         return vector_loss
       
 class EmbeddingVectorCosineSimilarityLoss(nn.Module):
     def __init__(self, opt):
         super(EmbeddingVectorCosineSimilarityLoss, self).__init__()
         self.opt = opt
-        self.emb_scale = math.sqrt(2) * math.log(self.opt.nID - 1)
+        self.emb_scale = math.sqrt(2) * math.log(max(self.opt.nID, 2) - 1)
 
     def forward(self, output, mask, ind, target):
         # Gather and transpose features as in the MSE loss
@@ -244,6 +266,6 @@ class EmbeddingVectorCosineSimilarityLoss(nn.Module):
             cosine_similarity = F.cosine_similarity(vector_head_normalized, vector_target_normalized, dim=1)
             vector_loss = 1 - cosine_similarity.mean()
         else:
-            vector_loss = torch.tensor(0.0).to(output.device)
+            vector_loss = torch.tensor(0.0, device=output.device, requires_grad=True)
 
         return vector_loss

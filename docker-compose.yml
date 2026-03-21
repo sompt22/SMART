@@ -1,0 +1,70 @@
+version: "3.9"
+
+# =============================================================================
+# SMART Multi-Object Tracker — docker-compose
+#
+# Usage:
+#   # GPU training (Linux + NVIDIA GPU)
+#   docker compose run --rm smart-gpu train tracking,embedding \
+#     --exp_id mot17_test --dataset mot17 --gpus 0 --num_epochs 5
+#
+#   # CPU inference (M1 Mac or any machine)
+#   docker compose run --rm smart-cpu infer tracking,embedding \
+#     --load_model /data/model.pth --demo /data/video.mp4 --gpus -1
+# =============================================================================
+
+x-common: &common
+  build:
+    context: .
+  volumes:
+    - ./data:/data                        # datasets & pretrained weights
+    - ./exp:/workspace/SMART/exp          # training outputs & checkpoints
+  working_dir: /workspace/SMART/src
+  environment:
+    - PYTHONHASHSEED=0
+  stdin_open: true
+  tty: true
+
+services:
+
+  # ── GPU service (NVIDIA CUDA, Linux x86_64) ──────────────────────────────
+  smart-gpu:
+    <<: *common
+    build:
+      context: .
+      target: runtime           # multi-stage: compiled CUDA + slim runtime
+      args:
+        TORCH_CUDA_ARCH_LIST: "6.0;6.1;7.0;7.5;8.0;8.6;8.9+PTX"
+    image: smart:gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    environment:
+      - PYTHONHASHSEED=0
+      - CUDA_VISIBLE_DEVICES=${CUDA_VISIBLE_DEVICES:-0}
+
+  # ── CPU service (arm64 / Apple Silicon / no-GPU servers) ─────────────────
+  smart-cpu:
+    <<: *common
+    build:
+      context: .
+      target: cpu               # multi-stage: CPU-only / arm64 image
+    image: smart:cpu
+    platform: linux/arm64       # explicit for M1 Mac (Docker Desktop)
+    # NOTE: MPS (Metal GPU) is NOT accessible inside Docker on macOS.
+    #       The model runs on CPU inside the container.
+    #       For MPS acceleration, use the native setup_mac_m1.sh instead.
+
+  # ── TensorBoard ──────────────────────────────────────────────────────────
+  tensorboard:
+    image: tensorflow/tensorflow:latest
+    command: tensorboard --logdir /exp --host 0.0.0.0 --port 6006
+    ports:
+      - "6006:6006"
+    volumes:
+      - ./exp:/exp
+    restart: unless-stopped

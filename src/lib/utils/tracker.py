@@ -45,6 +45,9 @@ class Tracker:
         self.next_track_id = 0
         self.tracks = []
         self.frm_count = 0
+        # Re-open debug file if it was previously closed via close()
+        if self.opt.debug == 4:
+            self.initialize_files()
 
     def step(self, detections, public_det=None):
         N = len(detections) # Number of Detections
@@ -60,6 +63,19 @@ class Tracker:
             for det in detections:
                 if det['score'] > self.opt.new_thresh:
                     self.create_new_track(det)
+            self.frm_count += 1
+            return []
+
+        # Early return: no detections, age out all tracks
+        if N == 0:
+            tracks_to_remove = []
+            for track in self.tracks:
+                if track.age < self.max_age:
+                    track.increment_age()
+                else:
+                    tracks_to_remove.append(track)
+            for track in tracks_to_remove:
+                self.tracks.remove(track)
             self.frm_count += 1
             return []
 
@@ -82,7 +98,7 @@ class Tracker:
             self.oper.write(str(lse_dist) + "\n")
 
         ## Gating for box size with adaptive threshold
-        min_gate = 400.0  # minimum gate value (20px^2 equivalent)
+        min_gate = self.opt.min_gate
         effective_track_size = np.maximum(track_size, min_gate)
         effective_item_size = np.maximum(item_size, min_gate)
         invalid = ((lse_dist > effective_track_size.reshape(1, M)) + \
@@ -97,14 +113,16 @@ class Tracker:
 
         # === Stage 1: Embedding-based association ===
         embeddings_valid = self.embedding_task and \
-            all(det['embedding'] is not None for det in detections) and \
+            all('embedding' in det and det['embedding'] is not None for det in detections) and \
             all(track.embedding is not None for track in self.tracks)
         if embeddings_valid:
-            dets_emb = np.asarray([det['embedding'] for det in detections], np.float32)      # N x embedding_dim
             tracks_emb = np.asarray([track.embedding for track in self.tracks], np.float32)  # M x embedding_dim
-            cos_sim = matching.embedding_distance(dets_emb, tracks_emb)
+            dets_emb = np.asarray([det['embedding'] for det in detections], np.float32)      # N x embedding_dim
+            # embedding_distance(tracks, dets) → shape (M, N): rows=tracks, cols=dets.
+            # Transpose to (N, M) so rows=dets, cols=tracks, matching invalid's layout.
+            cos_sim = matching.embedding_distance(tracks_emb, dets_emb).T  # (N, M)
             gated_cos_sim = cos_sim + invalid * 1.0
-            matched_indices, unmatched_dets, unmatched_tracks = matching.linear_assignment(gated_cos_sim, thresh=0.65)
+            matched_indices, unmatched_dets, unmatched_tracks = matching.linear_assignment(gated_cos_sim, thresh=self.opt.embedding_thresh)
             if self.opt.debug == 4:
                 self.oper.write("Cosine Similarity Matrix: \n")
                 self.oper.write(str(cos_sim) + "\n")
@@ -126,7 +144,7 @@ class Tracker:
                         if item_cat[d_idx] != track_cat[t_idx]:
                             iou_cost[di, ti] = 1.0
 
-                iou_matched, iou_unmatched_dets, iou_unmatched_tracks = matching.linear_assignment(iou_cost, thresh=0.7)
+                iou_matched, iou_unmatched_dets, iou_unmatched_tracks = matching.linear_assignment(iou_cost, thresh=self.opt.iou_thresh)
 
                 if self.opt.debug == 4:
                     self.oper.write("Stage 2 IoU Cost Matrix: \n")
@@ -148,7 +166,8 @@ class Tracker:
             if self.opt.hungarian:
                 item_score = np.array([item['score'] for item in detections], np.float32) # N
                 lse_dist[lse_dist > 1e18] = 1e18
-                matched_indices = linear_assignment_sk(lse_dist)
+                row_ind, col_ind = linear_assignment_sk(lse_dist)
+                matched_indices = np.column_stack((row_ind, col_ind)) if len(row_ind) > 0 else np.empty((0, 2), dtype=int)
             else:
                 matched_indices = matching.greedy_assignment(copy.deepcopy(lse_dist))
             unmatched_dets = [d for d in range(dets.shape[0]) if not (d in matched_indices[:, 0])]
@@ -166,7 +185,7 @@ class Tracker:
             new_tracking = detections[m[0]]['tracking'] if self.tracking_task else None
             new_embedding = detections[m[0]]['embedding'] if self.embedding_task else None
             # Only update embedding for high-confidence matches to avoid noisy updates
-            if new_embedding is not None and detections[m[0]]['score'] < 0.3:
+            if new_embedding is not None and detections[m[0]]['score'] < self.opt.emb_min_score:
                 new_embedding = None
             track.update(new_bbox=detections[m[0]]['bbox'],\
                         new_score=detections[m[0]]['score'],\
@@ -224,14 +243,14 @@ class Tracker:
         return ret
 
     def close(self):
-        if self.opt.debug == 4 and hasattr(self, 'oper'):
+        if self.opt.debug == 4 and hasattr(self, 'oper') and not self.oper.closed:
             self.oper.flush()
             self.oper.close()
 
     def create_new_track(self, detection):
         """Create a new track for a detection."""
-        init_tracking = detection['tracking'] if 'tracking' in self.opt.task else None
-        init_embedding = detection['embedding'] if 'embedding' in self.opt.task else None
+        init_tracking = detection.get('tracking') if self.tracking_task else None
+        init_embedding = detection.get('embedding') if self.embedding_task else None
         self.next_track_id += 1
         self.tracks.append(Track(track_id=self.next_track_id, \
                                  initial_bbox=detection['bbox'],\

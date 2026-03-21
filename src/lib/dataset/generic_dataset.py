@@ -72,7 +72,13 @@ class GenericDataset(data.Dataset):
         for image in self.coco.dataset['images']:
           self.video_to_images[image['video_id']].append(image)
       if 'total_id' in self.coco.dataset:
-        print('==> Track id start from %d' % self.coco.dataset['total_id'])
+        total_id = self.coco.dataset['total_id']
+        print('==> Total unique track IDs in dataset: %d' % total_id)
+        if total_id > opt.nID:
+          print('WARNING: Dataset has %d unique track IDs but nID is %d. '
+                'Track IDs >= nID will be excluded from embedding loss. '
+                'Set --nID %d to use all IDs.' % (total_id, opt.nID, total_id))
+          opt.nID = total_id
       
       self.img_dir = img_dir
 
@@ -168,6 +174,8 @@ class GenericDataset(data.Dataset):
     ann_ids = coco.getAnnIds(imgIds=[img_id])
     anns = copy.deepcopy(coco.loadAnns(ids=ann_ids))
     img = cv2.imread(img_path)
+    if img is None:
+      raise FileNotFoundError('Failed to read image: {}'.format(img_path))
     return img, anns, img_info, img_path
 
   def _load_data(self, index):
@@ -198,6 +206,9 @@ class GenericDataset(data.Dataset):
             for img_info in img_infos \
             if (img_info['frame_id'] - frame_id) == 0 and \
             (not ('sensor_id' in img_info) or img_info['sensor_id'] == sensor_id)]
+    if len(img_ids) == 0:
+      # Fallback: use the current frame's own data
+      img_ids = [(img_infos[0]['id'], img_infos[0]['frame_id'])]
     rand_id = np.random.choice(len(img_ids))
     img_id, pre_frame_id = img_ids[rand_id]
     frame_dist = abs(frame_id - pre_frame_id)
@@ -214,7 +225,7 @@ class GenericDataset(data.Dataset):
     pre_cts, track_ids, embedding_vectors = [], [], []
     for ann in anns:
       cls_id = int(self.cat_ids[ann['category_id']])
-      if cls_id > self.opt.num_classes or cls_id <= -99 or \
+      if cls_id > self.opt.num_classes or cls_id <= -999 or \
          ('iscrowd' in ann and ann['iscrowd'] > 0):
         continue
       bbox = self._coco_box_to_bbox(ann['bbox'])
@@ -244,7 +255,7 @@ class GenericDataset(data.Dataset):
           pre_cts.append(ct0 / down_ratio)
 
         track_ids.append(ann['track_id'] if 'track_id' in ann else -1)
-        if self.opt.know_dist_weight:
+        if self.opt.know_dist_weight and 'embedding' in ann:
           embedding_vectors.append(ann['embedding'])
         if return_hm:
           draw_umich_gaussian(pre_hm[0], ct_int, radius, k=conf)
@@ -463,9 +474,10 @@ class GenericDataset(data.Dataset):
     gt_det['clses'].append(cls_id - 1)
     gt_det['cts'].append(ct)
 
+    ann_track_id = ann.get('track_id', -1)
     if 'tracking' in self.opt.heads:
-      if ann['track_id'] in track_ids:
-        pre_ct = pre_cts[track_ids.index(ann['track_id'])]
+      if ann_track_id in track_ids:
+        pre_ct = pre_cts[track_ids.index(ann_track_id)]
         ret['tracking_mask'][k] = 1
         ret['tracking'][k] = pre_ct - ct_int
         gt_det['tracking'].append(ret['tracking'][k])
@@ -473,15 +485,15 @@ class GenericDataset(data.Dataset):
         gt_det['tracking'].append(np.zeros(2, np.float32))
 
     if 'embedding' in self.opt.heads:
-      if ann['track_id'] in track_ids:
+      if ann_track_id in track_ids:
         ret['tid_mask'][k] = 1
-        ret['tid'][k] = ann['track_id'] 
+        ret['tid'][k] = ann_track_id
         gt_det['tid'].append(ret['tid'][k])
       else:
         gt_det['tid'].append(np.array(-1,dtype=np.int64))
-          
+
       if self.opt.know_dist_weight:
-        if 'embedding' in ann and ann['track_id'] in track_ids:
+        if 'embedding' in ann and ann_track_id in track_ids:
           ret['vectors_mask'][k] = 1
           ret['vectors'][k] = ann['embedding']
           gt_det['vectors'].append(ret['vectors'][k])
@@ -622,7 +634,7 @@ class GenericDataset(data.Dataset):
                 'hps': np.zeros((1, 17, 2), dtype=np.float32),
                 'tid': np.array([-1], dtype=np.int64),
                 'vectors': np.zeros((1, self.opt.embedding_dim), dtype=np.float32),}
-    gt_det = {k: np.array(gt_det[k], dtype=np.float32) for k in gt_det}
+    gt_det = {k: np.array(gt_det[k], dtype=np.int64 if k == 'tid' else np.float32) for k in gt_det}
     return gt_det
 
   def fake_video_data(self):
