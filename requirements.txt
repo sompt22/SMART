@@ -1,3 +1,7 @@
+# DEPRECATED — this file is not used by any automated build.
+# Use environment.yml (Linux/CUDA) or environment_mac_m1.yml (Apple Silicon) instead.
+# Kept as a reference only; package versions here are not pinned and may be out of date.
+#
 # conda update -n base -c defaults conda
 # CUDA 11.3
 #conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=11.3 -c pytorch

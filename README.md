@@ -21,13 +21,14 @@ Contact: [simsekfe@gmail.com](mailto:simsekfe@gmail.com)
    - [Apple Silicon M1/M2/M3 (native MPS)](#option-b-apple-silicon-m1m2m3-native-mps)
    - [Docker](#option-c-docker)
    - [Google Colab](#option-d-google-colab)
-5. [Dataset Preparation](#dataset-preparation)
-6. [Training](#training)
-7. [Inference & Demo](#inference--demo)
-8. [Benchmark Evaluation](#benchmark-evaluation)
-9. [MOT Simulation Suite](#mot-simulation-suite)
-10. [Citation](#citation)
-11. [License](#license)
+5. [Pretrained Models](#pretrained-models)
+6. [Dataset Preparation](#dataset-preparation)
+7. [Training](#training)
+8. [Inference & Demo](#inference--demo)
+9. [Benchmark Evaluation](#benchmark-evaluation)
+10. [MOT Simulation Suite](#mot-simulation-suite)
+11. [Citation](#citation)
+12. [License](#license)
 
 ---
 
@@ -222,6 +223,32 @@ Open `SMART_Colab.ipynb` in Google Colab. The notebook covers:
 
 ---
 
+## Pretrained Models
+
+Place all model files under `models/` in the repository root (create it if needed: `mkdir -p models`).
+
+### Base detector (required for training from scratch)
+
+| File | Description | Source |
+|------|-------------|--------|
+| `ctdet_coco_dla_2x.pth` | DLA-34 detector pretrained on COCO | [CenterNet Model Zoo](https://github.com/xingyizhou/CenterNet/blob/master/readme/MODEL_ZOO.md) |
+
+Download the file and place it at `models/ctdet_coco_dla_2x.pth`.
+
+### SMART tracking models (required for inference & benchmark evaluation)
+
+| File | Trained on | Link |
+|------|-----------|------|
+| `sompt22.pth` | SOMPT22 | <!-- TODO: add hosted link (e.g. Google Drive / HuggingFace) --> |
+| `divo.pth` | DIVOTrack | <!-- TODO: add hosted link --> |
+| `mot20.pth` | MOT20 | <!-- TODO: add hosted link --> |
+
+> These model files are not included in the repository. If you trained your own model, the checkpoint
+> is saved to `exp/tracking,embedding/<exp_id>/model_last.pth` and can be used directly with
+> `--load_model` in all commands below.
+
+---
+
 ## Dataset Preparation
 
 All commands run from the repository root. Datasets go under `data/`.
@@ -390,9 +417,71 @@ bash experiments/train.sh mot17 30 20,25 1.25e-4 tracking,embedding 0.1 focal ad
 
 ### Knowledge distillation
 
-Set `--know_dist_weight <w>` to enable embedding-vector distillation when the
-training annotations already contain teacher embeddings. Teacher-vector
-extraction must be prepared offline before training.
+Set `--know_dist_weight <w>` (e.g. `0.1`) to enable embedding-vector distillation.
+This requires the training annotations to contain pre-extracted teacher embeddings,
+produced by a separate ReID model from
+[`sompt22/Person_reID_baseline_pytorch`](https://github.com/sompt22/Person_reID_baseline_pytorch).
+
+**Step 1 — Train (or obtain) a ReID teacher model**
+
+Follow the instructions in the ReID repo to train a `ft_ResNet50` model with
+`linear_num=128` on your dataset. The checkpoint will be saved as
+`model/<exp_name>/net_last.pth`.
+
+**Step 2 — Extract embeddings into the annotation JSON**
+
+Edit the hardcoded paths at the top of `extract_feat.py` in the ReID repo:
+
+```python
+# extract_feat.py (in Person_reID_baseline_pytorch)
+model_path  = "/path/to/reid/model/net_last.pth"
+images_root = "/path/to/SMART/data/<dataset>/images/train/"
+ann_path    = "/path/to/SMART/data/<dataset>/annotations/train.json"
+out_path    = "/path/to/SMART/data/<dataset>/annotations/train_distill.json"
+```
+
+Then run:
+
+```bash
+cd /path/to/Person_reID_baseline_pytorch
+python3 extract_feat.py
+```
+
+The script crops each bounding box from the annotation, runs it through the ReID model,
+and writes a new JSON (`train_distill.json`) identical to the input but with an
+`"embedding"` field added to every annotation entry:
+
+```json
+{
+  "id": 1, "image_id": 42, "bbox": [x, y, w, h], "track_id": 7,
+  "embedding": [0.032, -0.118, ..., 0.074]
+}
+```
+
+Embeddings are 128-dim, L2-normalized `float32` values.
+
+**Step 3 — Point the dataset loader at the new annotation file**
+
+In your dataset class (e.g. `src/lib/datasets/sompt22.py`) update `ann_path` to
+reference `train_distill.json` instead of `train.json`.
+
+**Step 4 — Train with distillation**
+
+```bash
+cd src
+python3 main.py tracking,embedding \
+  --exp_id mot17_distill \
+  --dataset mot17 \
+  --load_model ../models/ctdet_coco_dla_2x.pth \
+  --know_dist_weight 0.1 \
+  --gpus 0 --batch_size 8 --num_epochs 30 \
+  --lr 1.25e-4 --lr_step 20,25 \
+  --num_classes 1 --ltrb_amodal --pre_hm --same_aug_pre \
+  --hm_disturb 0.05 --lost_disturb 0.4 --fp_disturb 0.1
+```
+
+> If `--know_dist_weight` is set but an annotation entry has no `"embedding"` field,
+> the distillation loss is silently skipped for that detection.
 
 ---
 
@@ -455,6 +544,10 @@ MPS (if available) → CPU.
 
 Run from `src/`:
 
+```bash
+cd src
+```
+
 ### SOMPT22
 
 ```bash
@@ -487,6 +580,104 @@ python3 test.py tracking,embedding \
   --track_thresh 0.4 --pre_thresh 0.5 \
   --load_model ../models/mot20.pth
 ```
+
+---
+
+## Custom Dataset Format
+
+To use a custom dataset, create COCO-style JSON annotations under `data/<dataset>/annotations/`.
+
+**Required fields per annotation entry:**
+
+```json
+{
+  "id": 1,
+  "image_id": 1,
+  "category_id": 1,
+  "bbox": [x, y, width, height],
+  "track_id": 42,
+  "iscrowd": 0,
+  "area": 1200.0
+}
+```
+
+**Required fields per image entry:**
+
+```json
+{
+  "id": 1,
+  "file_name": "train/seq01/img1/000001.jpg",
+  "height": 1080,
+  "width": 1920,
+  "video_id": 1,
+  "frame_id": 1
+}
+```
+
+**Optional field for knowledge distillation:**
+
+```json
+{ "embedding": [0.12, -0.03, ..., 0.44] }
+```
+(list of `embedding_dim` floats, default 128)
+
+Register the new dataset class under `src/lib/datasets/` and add it to
+`src/lib/datasets/dataset_factory.py` following the existing patterns (e.g. `sompt22.py`).
+
+---
+
+## Troubleshooting
+
+### DCNv2 build fails (`error: command 'gcc' failed`)
+
+```bash
+# Make sure gcc and CUDA toolkit-dev are installed
+conda install cudatoolkit-dev -c conda-forge
+pip install python-dev-tools --user --upgrade
+# Then retry:
+cd src/lib/model/networks/DCNv2 && python setup.py build develop
+```
+
+### `ImportError: numpy.core.multiarray failed to import` or numba crash
+
+numpy must be pinned to **1.23.5** for numba compatibility:
+
+```bash
+pip install numpy==1.23.5
+```
+
+### `ModuleNotFoundError: No module named 'lib'` when running scripts
+
+Scripts must be run from inside `src/`:
+
+```bash
+cd src
+python3 main.py ...
+```
+
+### CUDA out of memory during training
+
+Reduce `--batch_size` (try 4 or 2). On single-GPU setups 8 is the recommended maximum for DLA-34.
+
+### MPS / Apple Silicon: model runs on CPU instead of MPS
+
+Verify MPS is available:
+
+```python
+import torch; print(torch.backends.mps.is_available())
+```
+
+If `False`, ensure macOS ≥ 13 and PyTorch ≥ 2.1 installed via the native arm64 conda env (`smart_m1`). Use `--gpus -1` in all commands.
+
+### Docker: dataset not found inside container
+
+Datasets must be mounted to `/data`:
+
+```bash
+docker run --gpus all -v $(pwd)/data:/data smart:gpu ...
+```
+
+Paths inside the container use `/data/` — e.g. `--demo /data/video.mp4`.
 
 ---
 
