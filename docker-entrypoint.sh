@@ -19,25 +19,19 @@ shift || true
 case "$CMD" in
 
   train)
-    # Auto-detect GPU batch size (same logic as train.sh)
-    GPU_NAME=$(nvidia-smi --query-gpu=name --format=csv,noheader,nounits 2>/dev/null || echo "Unknown")
-    case "$GPU_NAME" in
-      *"RTX 3090"*)  BATCH=16 ;;
-      *"RTX 4090"*)  BATCH=8  ;;
-      *"1080 Ti"*)   BATCH=8  ;;
-      *)             BATCH=8  ;;
-    esac
-    echo "[SMART] GPU: $GPU_NAME | default batch_size=$BATCH"
+    echo "[SMART] Data dir: ${SMART_DATA_DIR:-/workspace/SMART/data}"
     echo "[SMART] Starting training: python main.py $*"
     exec python main.py "$@"
     ;;
 
   infer)
+    echo "[SMART] Data dir: ${SMART_DATA_DIR:-/workspace/SMART/data}"
     echo "[SMART] Starting inference: python demo.py $*"
     exec python demo.py "$@"
     ;;
 
   test)
+    echo "[SMART] Data dir: ${SMART_DATA_DIR:-/workspace/SMART/data}"
     echo "[SMART] Starting evaluation: python test.py $*"
     exec python test.py "$@"
     ;;

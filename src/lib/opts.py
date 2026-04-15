@@ -28,6 +28,8 @@ class opts(object):
                                   '3: use matplot to display' # useful when lunching training with ipython notebook
                                   '4: save all visualizations to disk')
     self.parser.add_argument('--no_pause', action='store_true')
+    self.parser.add_argument('--display', action='store_true',
+                             help='open interactive OpenCV windows during demo/inference.')
     self.parser.add_argument('--demo', default='', 
                              help='path to image/ image folders/ video. '
                                   'or "webcam"')
@@ -339,7 +341,8 @@ class opts(object):
 
     # log dirs
     opt.root_dir = os.path.join(os.path.dirname(__file__), '..', '..')
-    opt.data_dir = os.path.join(opt.root_dir, 'data')
+    opt.data_dir = os.environ.get(
+      'SMART_DATA_DIR', os.path.join(opt.root_dir, 'data'))
     print('data_dir', opt.data_dir)
     opt.exp_dir = os.path.join(opt.root_dir, 'exp', opt.task)
     opt.save_dir = os.path.join(opt.exp_dir, opt.exp_id)
@@ -429,12 +432,15 @@ class opts(object):
     default_dataset_info = {
       'ctdet': 'coco', 'multi_pose': 'coco_hp', 'ddd': 'nuscenes',
       'tracking,ctdet': 'coco', 'tracking,multi_pose': 'coco_hp', 
-      'tracking,ddd': 'nuscenes', 'tracking,embedding,ctdet': 'coco'
+      'tracking,ddd': 'nuscenes', 'tracking,embedding': 'mot17',
+      'tracking,embedding,ctdet': 'coco'
     }
-    opt = self.parse()
+    opt = self.parse(args)
     from dataset.dataset_factory import dataset_factory
-    train_dataset = default_dataset_info[opt.task] \
-      if opt.task in default_dataset_info else 'coco'
-    dataset = dataset_factory[train_dataset]
+    dataset_name = opt.dataset
+    if dataset_name == self.parser.get_default('dataset'):
+      dataset_name = default_dataset_info[opt.task] \
+        if opt.task in default_dataset_info else dataset_name
+    dataset = dataset_factory[dataset_name]
     opt = self.update_dataset_info_and_set_heads(opt, dataset)
     return opt

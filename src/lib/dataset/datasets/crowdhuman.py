@@ -17,11 +17,23 @@ class CrowdHuman(GenericDataset):
   max_objs = 128
   class_name = ['person']
   cat_ids = {1: 1}
+
+  @staticmethod
+  def _resolve_img_dir(data_dir, split):
+    candidates = [
+      os.path.join(data_dir, '{}'.format(split)),
+      os.path.join(data_dir, 'CrowdHuman_{}'.format(split), 'Images'),
+      os.path.join(data_dir, 'CrowdHuman_{}'.format(split.capitalize()), 'Images')
+    ]
+    for candidate in candidates:
+      if os.path.exists(candidate):
+        return candidate
+    return candidates[0]
+
   def __init__(self, opt, split):
     super(CrowdHuman, self).__init__()
     data_dir = os.path.join(opt.data_dir, 'crowdhuman')
-    img_dir = os.path.join(
-      data_dir, '{}'.format(split))
+    img_dir = self._resolve_img_dir(data_dir, split)
     ann_path = os.path.join(data_dir, 'annotations', 
       '{}.json').format(split)
 

@@ -229,24 +229,27 @@ All commands run from the repository root. Datasets go under `data/`.
 ### MOT17
 
 ```bash
-cd tools
-bash get_mot_17.sh   # downloads, unzips, converts to COCO format
+bash src/tools/mot17/get_mot_17.sh
 ```
 
-Expected structure:
+This helper downloads MOT17, normalizes the layout expected by the loaders, and
+generates COCO-style annotations with globally unique track IDs.
+
+Expected structure after conversion:
 
 ```
 data/mot17/
-├── train/
-│   ├── MOT17-02-FRCNN/
-│   │   ├── img1/
-│   │   ├── gt/
-│   │   │   ├── gt.txt
-│   │   │   ├── gt_train_half.txt
-│   │   │   └── gt_val_half.txt
-│   │   └── det/
-│   └── ...
-├── test/
+├── images/
+│   ├── train/
+│   │   ├── MOT17-02-FRCNN/
+│   │   │   ├── img1/
+│   │   │   ├── gt/
+│   │   │   │   ├── gt.txt
+│   │   │   │   ├── gt_train_half.txt
+│   │   │   │   └── gt_val_half.txt
+│   │   │   └── det/
+│   │   └── ...
+│   └── test/
 └── annotations/
     ├── train_half.json
     ├── val_half.json
@@ -257,22 +260,21 @@ data/mot17/
 ### SOMPT22 / DIVOTrack
 
 Download from the respective dataset pages and place under `data/sompt22/` or
-`data/divo/`. Run the corresponding conversion script in `tools/`.
+`data/divo/`, preserving the `images/<split>` and `annotations/<split>.json`
+layout used by the dataset loaders.
 
 ### CrowdHuman (pretraining)
 
 ```bash
 # Download from https://www.crowdhuman.org/download.html
-# Place images under data/crowdhuman/CrowdHuman_train/Images/
-#                   data/crowdhuman/CrowdHuman_val/Images/
-# Then convert:
-cd tools && python convert_crowdhuman_to_coco.py
+# Place the extracted dataset under data/crowdhuman/
+python3 src/tools/convert_crowdhuman_to_coco.py
 ```
 
 ### MOT20
 
 ```bash
-cd tools && bash get_mot_20.sh
+bash src/tools/mot20/get_mot_20.sh
 ```
 
 ### KITTI Tracking
@@ -291,9 +293,9 @@ data/kitti_tracking/
 └── data_tracking_calib/
 ```
 
-```bash
-cd tools && python convert_kitti_to_coco.py
-```
+The KITTI conversion helper is not bundled in this repository snapshot. If you
+plan to use KITTI, add your converter under `src/tools/` and keep the generated
+annotations under `data/kitti_tracking/annotations/`.
 
 ### nuScenes (3D tracking)
 
@@ -308,9 +310,9 @@ data/nuscenes/
     └── v1.0-trainval_meta/
 ```
 
-```bash
-cd tools && python convert_nuscenes_to_coco.py
-```
+The nuScenes conversion helper is not bundled in this repository snapshot. If
+you plan to use nuScenes, generate COCO-style annotations separately and place
+them under `data/nuscenes/annotations/`.
 
 ---
 
@@ -326,7 +328,7 @@ cd src
 ### Standard training (MOT17)
 
 ```bash
-python main.py tracking,embedding \
+python3 main.py tracking,embedding \
   --exp_id mot17_dla34 \
   --dataset mot17 \
   --arch dla_34 \
@@ -353,10 +355,10 @@ python main.py tracking,embedding \
 conda activate smart_m1
 cd src
 
-python main.py tracking,embedding \
+python3 main.py tracking,embedding \
   --exp_id mot17_m1 \
   --dataset mot17 \
-  --gpus -1 \          # triggers MPS auto-detection
+  --gpus -1 \
   --batch_size 4 \
   --num_workers 4 \
   --num_epochs 30 \
@@ -375,13 +377,22 @@ python main.py tracking,embedding \
 ### Resume training
 
 ```bash
-python main.py tracking,embedding --exp_id mot17_dla34 --dataset mot17 --resume
+python3 main.py tracking,embedding --exp_id mot17_dla34 --dataset mot17 --resume
+```
+
+### Helper script
+
+From the repository root:
+
+```bash
+bash experiments/train.sh mot17 30 20,25 1.25e-4 tracking,embedding 0.1 focal adam ../models/ctdet_coco_dla_2x.pth 8 0
 ```
 
 ### Knowledge distillation
 
-Add `--know_dist_weight <w>` and point `--teacher_model` to a pretrained ReID
-model. See experiment scripts for full examples.
+Set `--know_dist_weight <w>` to enable embedding-vector distillation when the
+training annotations already contain teacher embeddings. Teacher-vector
+extraction must be prepared offline before training.
 
 ---
 
@@ -396,19 +407,21 @@ cd src
 ### Video
 
 ```bash
-python demo.py tracking,embedding \
+python3 demo.py tracking,embedding \
+  --dataset sompt22 \
   --load_model ../models/sompt22.pth \
   --demo /path/to/video.mp4 \
   --num_classes 1 \
   --ltrb_amodal \
   --save_video \
-  --no_pause
+  --save_results
 ```
 
 ### Image folder
 
 ```bash
-python demo.py tracking,embedding \
+python3 demo.py tracking,embedding \
+  --dataset sompt22 \
   --load_model ../models/sompt22.pth \
   --demo /path/to/frames/ \
   --num_classes 1 \
@@ -418,15 +431,18 @@ python demo.py tracking,embedding \
 ### Webcam
 
 ```bash
-python demo.py tracking,embedding \
+python3 demo.py tracking,embedding \
+  --dataset sompt22 \
   --load_model ../models/sompt22.pth \
   --demo webcam \
-  --num_classes 1
+  --num_classes 1 \
+  --display
 ```
 
 ### Debug visualization
 
-Add `--debug 2` to overlay heatmaps and offset predictions on the output.
+Add `--debug 2 --display` to overlay heatmaps and offset predictions on the
+output. Demo/inference is headless-safe by default.
 
 ### Apple Silicon / CPU
 
@@ -442,7 +458,7 @@ Run from `src/`:
 ### SOMPT22
 
 ```bash
-python test.py tracking,embedding \
+python3 test.py tracking,embedding \
   --exp_id sompt22 \
   --dataset sompt22 \
   --pre_hm --ltrb_amodal \
@@ -453,7 +469,7 @@ python test.py tracking,embedding \
 ### DIVOTrack
 
 ```bash
-python test.py tracking,embedding \
+python3 test.py tracking,embedding \
   --exp_id divo \
   --dataset divo \
   --pre_hm --ltrb_amodal \
@@ -464,7 +480,7 @@ python test.py tracking,embedding \
 ### MOT20
 
 ```bash
-python test.py tracking,embedding \
+python3 test.py tracking,embedding \
   --exp_id mot20 \
   --dataset mot20 \
   --pre_hm --ltrb_amodal \

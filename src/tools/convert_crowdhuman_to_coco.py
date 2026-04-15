@@ -2,11 +2,26 @@ import os
 import numpy as np
 import json
 import cv2
+from pathlib import Path
 
-DATA_PATH = '../../data/crowdhuman/'
-OUT_PATH = DATA_PATH + 'annotations/'
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parents[1]
+DATA_PATH = REPO_ROOT / 'data' / 'crowdhuman'
+OUT_PATH = DATA_PATH / 'annotations'
 SPLITS = ['val', 'train']
 DEBUG = False
+
+
+def resolve_image_root(split):
+    candidates = [
+        DATA_PATH / split,
+        DATA_PATH / f'CrowdHuman_{split}' / 'Images',
+        DATA_PATH / f'CrowdHuman_{split.capitalize()}' / 'Images',
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
 
 def load_func(fpath):
     print('fpath', fpath)
@@ -17,20 +32,23 @@ def load_func(fpath):
     return records
 
 if __name__ == '__main__':
-  if not os.exists(OUT_PATH):
-    os.mkdir(OUT_PATH)
+  OUT_PATH.mkdir(parents=True, exist_ok=True)
   for split in SPLITS:
-    data_path = DATA_PATH + split
-    out_path = OUT_PATH + '{}.json'.format(split)
+    data_path = resolve_image_root(split)
+    out_path = OUT_PATH / '{}.json'.format(split)
     out = {'images': [], 'annotations': [], 
            'categories': [{'id': 1, 'name': 'person'}]}
-    ann_path = DATA_PATH + '/annotation_{}.odgt'.format(split)
+    ann_path = DATA_PATH / 'annotation_{}.odgt'.format(split)
     anns_data = load_func(ann_path)
     image_cnt = 0
     ann_cnt = 0
     video_cnt = 0
     for ann_data in anns_data:
       image_cnt += 1
+      image_file = data_path / '{}.jpg'.format(ann_data['ID'])
+      if not image_file.exists():
+        raise FileNotFoundError(
+          'Expected CrowdHuman image not found: {}'.format(image_file))
       image_info = {'file_name': '{}.jpg'.format(ann_data['ID']),
                     'id': image_cnt}
       out['images'].append(image_info)
@@ -52,4 +70,3 @@ if __name__ == '__main__':
     json.dump(out, open(out_path, 'w'))
         
         
-

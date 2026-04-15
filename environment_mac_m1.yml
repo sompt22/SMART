@@ -16,15 +16,15 @@ dependencies:
 
       # Core scientific
       - numpy==1.23.5
-      - scipy
-      - matplotlib
+      - scipy==1.10.1
+      - matplotlib==3.7.1
 
       # Computer vision
-      - opencv-python
-      - Pillow
+      - opencv-python-headless==4.8.0.74
+      - Pillow==9.4.0
 
       # Build tools
-      - Cython
+      - Cython==0.29.34
       - setuptools>=67.0
 
       # MOT / tracking utilities
@@ -33,16 +33,17 @@ dependencies:
       - lapx>=0.5.2
 
       # Deep learning utilities
-      - numba
+      - numba==0.56.4
+      - llvmlite==0.39.1
       - tensorboardX
-      - fvcore
-      - pycocotools
-      - progress
-      - easydict
-      - pyyaml
-      - yacs
+      - fvcore==0.1.5.post20221221
+      - pycocotools==2.0
+      - progress==1.6
+      - easydict==1.10
+      - pyyaml==6.0
+      - yacs==0.1.8
 
       # Data / IO
       - openpyxl
-      - pyquaternion
+      - pyquaternion==0.9.9
       - pyrsistent

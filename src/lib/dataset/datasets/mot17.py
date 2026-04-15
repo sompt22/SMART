@@ -26,6 +26,8 @@ class MOT17(GenericDataset):
     ann_file = f'{split}.json'
 
     img_dir = os.path.join(data_dir, 'images', f'{split}')
+    if not os.path.exists(img_dir):
+      img_dir = os.path.join(data_dir, f'{split}')
     print('ann_file', ann_file)
     ann_path = os.path.join(data_dir, 'annotations', ann_file)
 
@@ -73,4 +75,3 @@ class MOT17(GenericDataset):
   
   def run_eval(self, results, save_dir):
     self.save_results(results, save_dir)
-

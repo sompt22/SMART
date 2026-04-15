@@ -160,7 +160,7 @@ class Detector(object):
     track_time += tracking_time - end_time
     tot_time += tracking_time - start_time
 
-    if self.opt.debug >= 1:
+    if self.opt.debug >= 1 or self.opt.save_video or self.opt.display:
       self.show_results(self.debugger, image, results)
     self.cnt += 1
 
@@ -464,7 +464,7 @@ class Detector(object):
       if not os.path.exists(self.opt.debug_dir):
         os.makedirs(self.opt.debug_dir)      
       debugger.save_all_imgs(self.opt.debug_dir, prefix='{}'.format(self.cnt))
-    else:
+    elif self.opt.display:
       debugger.show_all_imgs(pause=self.pause)
   
 

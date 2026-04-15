@@ -2,40 +2,52 @@ import os
 import numpy as np
 import json
 import cv2
+from pathlib import Path
 
 # Use the same script for MOT16
-# DATA_PATH = '../../data/mot16/'
-DATA_PATH = '../../data/mot17/'
-OUT_PATH = DATA_PATH + 'annotations/'
+SCRIPT_DIR = Path(__file__).resolve().parent
+REPO_ROOT = SCRIPT_DIR.parents[1]
+DATA_PATH = REPO_ROOT / 'data' / 'mot17'
+OUT_PATH = DATA_PATH / 'annotations'
 SPLITS = ['train_half', 'val_half', 'train', 'test']
 HALF_VIDEO = True
 CREATE_SPLITTED_ANN = True
 CREATE_SPLITTED_DET = True
 
+
+def resolve_split_root(data_path, split):
+  images_root = data_path / 'images'
+  if images_root.exists():
+    return images_root / split
+  return data_path / split
+
 if __name__ == '__main__':
+  OUT_PATH.mkdir(parents=True, exist_ok=True)
   for split in SPLITS:
-    data_path = DATA_PATH + (split if not HALF_VIDEO else 'train')
-    out_path = OUT_PATH + '{}.json'.format(split)
+    data_path = resolve_split_root(DATA_PATH, split if not HALF_VIDEO else 'train')
+    out_path = OUT_PATH / '{}.json'.format(split)
     out = {'images': [], 'annotations': [], 
-           'categories': [{'id': 1, 'name': 'pedestrain'}],
-           'videos': []}
+           'categories': [{'id': 1, 'name': 'pedestrian'}],
+           'videos': [],
+           'total_id': 0}
     seqs = os.listdir(data_path)
     image_cnt = 0
     ann_cnt = 0
     video_cnt = 0
+    total_id = 0
     for seq in sorted(seqs):
       if '.DS_Store' in seq:
         continue
-      if 'mot17' in DATA_PATH and (split != 'test' and not ('FRCNN' in seq)):
+      if 'mot17' in str(DATA_PATH).lower() and (split != 'test' and not ('FRCNN' in seq)):
         continue
       video_cnt += 1
       out['videos'].append({
         'id': video_cnt,
         'file_name': seq})
-      seq_path = '{}/{}/'.format(data_path, seq)
-      img_path = seq_path + 'img1/'
-      ann_path = seq_path + 'gt/gt.txt'
-      images = os.listdir(img_path)
+      seq_path = data_path / seq
+      img_path = seq_path / 'img1'
+      ann_path = seq_path / 'gt' / 'gt.txt'
+      images = os.listdir(str(img_path))
       num_images = len([image for image in images if 'jpg' in image])
       if HALF_VIDEO and ('half' in split):
         image_range = [0, num_images // 2] if 'train' in split else \
@@ -55,15 +67,16 @@ if __name__ == '__main__':
         out['images'].append(image_info)
       print('{}: {} images'.format(seq, num_images))
       if split != 'test':
-        det_path = seq_path + 'det/det.txt'
-        anns = np.loadtxt(ann_path, dtype=np.float32, delimiter=',')
-        dets = np.loadtxt(det_path, dtype=np.float32, delimiter=',')
+        det_path = seq_path / 'det' / 'det.txt'
+        anns = np.loadtxt(str(ann_path), dtype=np.float32, delimiter=',')
+        dets = np.loadtxt(str(det_path), dtype=np.float32, delimiter=',')
+        max_track_id = int(anns[:, 1].max()) if anns.size else 0
         if CREATE_SPLITTED_ANN and ('half' in split):
           anns_out = np.array([anns[i] for i in range(anns.shape[0]) if \
             int(anns[i][0]) - 1 >= image_range[0] and \
             int(anns[i][0]) - 1 <= image_range[1]], np.float32)
           anns_out[:, 0] -= image_range[0]
-          gt_out = seq_path + '/gt/gt_{}.txt'.format(split)
+          gt_out = seq_path / 'gt' / 'gt_{}.txt'.format(split)
           fout = open(gt_out, 'w')
           for o in anns_out:
             fout.write(
@@ -76,7 +89,7 @@ if __name__ == '__main__':
             int(dets[i][0]) - 1 >= image_range[0] and \
             int(dets[i][0]) - 1 <= image_range[1]], np.float32)
           dets_out[:, 0] -= image_range[0]
-          det_out = seq_path + '/det/det_{}.txt'.format(split)
+          det_out = seq_path / 'det' / 'det_{}.txt'.format(split)
           dout = open(det_out, 'w')
           for o in dets_out:
             dout.write(
@@ -93,7 +106,7 @@ if __name__ == '__main__':
           track_id = int(anns[i][1])
           cat_id = int(anns[i][7])
           ann_cnt += 1
-          if not ('15' in DATA_PATH):
+          if '15' not in str(DATA_PATH):
             if not (float(anns[i][8]) >= 0.25):
               continue
             if not (int(anns[i][6]) == 1):
@@ -109,13 +122,14 @@ if __name__ == '__main__':
           ann = {'id': ann_cnt,
                  'category_id': category_id,
                  'image_id': image_cnt + frame_id,
-                 'track_id': track_id,
+                 'track_id': track_id + total_id,
                  'bbox': anns[i][2:6].tolist(),
                  'conf': float(anns[i][6])}
           out['annotations'].append(ann)
+        total_id += max_track_id
       image_cnt += num_images
     print('loaded {} for {} images and {} samples'.format(
       split, len(out['images']), len(out['annotations'])))
+    out['total_id'] = total_id
     json.dump(out, open(out_path, 'w'))
         
-

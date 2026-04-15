@@ -139,6 +139,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     CUDA_HOME=/usr/local/cuda \
     LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH \
     PYTHONPATH=/workspace/SMART/src/lib:/workspace/SMART/src \
+    SMART_DATA_DIR=/data \
     PYTHONHASHSEED=0
 
 # ── Minimal runtime system libs ─────────────────────────────
@@ -212,6 +213,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/workspace/SMART/src/lib:/workspace/SMART/src \
+    SMART_DATA_DIR=/data \
     PYTHONHASHSEED=0
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -20,7 +20,6 @@ time_stats = ['tot', 'load', 'pre', 'net', 'dec', 'post', 'merge', 'display']
 
 def demo(opt):
   os.environ['CUDA_VISIBLE_DEVICES'] = opt.gpus_str
-  opt.debug = max(opt.debug, 1)
   detector = Detector(opt)
 
   if opt.demo == 'webcam' or \
@@ -41,8 +40,8 @@ def demo(opt):
     else:
       image_names = [opt.demo]
 
-  # Initialize output video
   out = None
+  out_path = None
   if is_video:
     out_name = opt.demo.split('/')[-1]
     out_name = out_name.split('.')[0]
@@ -50,14 +49,6 @@ def demo(opt):
     out_name = opt.demo.split('/')[-2]
     
   print('out_name', out_name)
-  if opt.save_video:
-    if not os.path.exists('../results/demo'):
-      os.makedirs('../results/demo')   
-    # fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    fourcc = cv2.VideoWriter_fourcc('m','p','4','v') # *'H264'
-    out = cv2.VideoWriter('../results/{}.mp4'.format(
-      opt.exp_id + '_' + out_name),fourcc, opt.save_framerate, (
-        opt.video_w, opt.video_h))
   
   if opt.debug < 5:
     detector.pause = False
@@ -84,7 +75,8 @@ def demo(opt):
       if cnt < opt.skip_first:
         continue
       
-      cv2.imshow('input', img)
+      if opt.display:
+        cv2.imshow('input', img)
 
       # track or detect the image.
       ret = detector.run(img)
@@ -101,14 +93,26 @@ def demo(opt):
 
       # save debug image to video
       if opt.save_video:
+        if 'generic' not in ret:
+          raise RuntimeError(
+            'save_video requires a rendered frame, but no debug frame was produced.')
         if not os.path.exists('../results/demo'):
-          os.makedirs('../results/demo') 
+          os.makedirs('../results/demo')
+        if out is None:
+          frame = ret['generic']
+          if opt.resize_video:
+            frame_h, frame_w = opt.video_h, opt.video_w
+          else:
+            frame_h, frame_w = frame.shape[0], frame.shape[1]
+          out_path = '../results/{}.mp4'.format(opt.exp_id + '_' + out_name)
+          fourcc = cv2.VideoWriter_fourcc('m', 'p', '4', 'v')
+          out = cv2.VideoWriter(
+            out_path, fourcc, opt.save_framerate, (frame_w, frame_h))
         out.write(ret['generic'])
-        #if not is_video:
         cv2.imwrite('../results/demo/{}.jpg'.format(cnt), ret['generic'])
       
       # esc to quit and finish saving video
-      if cv2.waitKey(1) == 27:
+      if opt.display and cv2.waitKey(1) == 27:
         save_and_exit(opt, out, results, out_name)
         return 
   save_and_exit(opt, out, results)

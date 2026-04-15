@@ -22,6 +22,7 @@ x-common: &common
   working_dir: /workspace/SMART/src
   environment:
     - PYTHONHASHSEED=0
+    - SMART_DATA_DIR=/data
   stdin_open: true
   tty: true
 
