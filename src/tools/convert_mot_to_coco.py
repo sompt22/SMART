@@ -29,7 +29,8 @@ if __name__ == '__main__':
     out = {'images': [], 'annotations': [], 
            'categories': [{'id': 1, 'name': 'pedestrian'}],
            'videos': [],
-           'total_id': 0}
+           'total_id': 0,
+           'track_id_base': 1}
     seqs = os.listdir(data_path)
     image_cnt = 0
     ann_cnt = 0
