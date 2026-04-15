@@ -57,7 +57,7 @@ python3 main.py "$task" \
     --gpus "$gpus" \
     --batch_size "$batch_size" \
     --lr "$lr" \
-    --num_workers 10 \
+    --num_workers 4 \
     --num_classes 1 \
     --embedding_loss "$loss" \
     --multi_loss uncertainty \

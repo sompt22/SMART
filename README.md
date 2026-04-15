@@ -462,7 +462,7 @@ Embeddings are 128-dim, L2-normalized `float32` values.
 
 **Step 3 — Point the dataset loader at the new annotation file**
 
-In your dataset class (e.g. `src/lib/datasets/sompt22.py`) update `ann_path` to
+In your dataset class (e.g. `src/lib/dataset/datasets/sompt22.py`) update `ann_path` to
 reference `train_distill.json` instead of `train.json`.
 
 **Step 4 — Train with distillation**
@@ -621,8 +621,8 @@ To use a custom dataset, create COCO-style JSON annotations under `data/<dataset
 ```
 (list of `embedding_dim` floats, default 128)
 
-Register the new dataset class under `src/lib/datasets/` and add it to
-`src/lib/datasets/dataset_factory.py` following the existing patterns (e.g. `sompt22.py`).
+Register the new dataset class under `src/lib/dataset/datasets/` and add it to
+`src/lib/dataset/dataset_factory.py` following the existing patterns (e.g. `sompt22.py`).
 
 ---
 

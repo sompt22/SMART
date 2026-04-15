@@ -252,18 +252,17 @@ class EmbeddingVectorCosineSimilarityLoss(nn.Module):
     def __init__(self, opt):
         super(EmbeddingVectorCosineSimilarityLoss, self).__init__()
         self.opt = opt
-        self.emb_scale = math.sqrt(2) * math.log(max(self.opt.nID, 2) - 1)
 
     def forward(self, output, mask, ind, target):
-        # Gather and transpose features as in the MSE loss
         vector_head = _tranpose_and_gather_feat(output, ind)
         vector_head_masked = vector_head[mask > 0].contiguous()
-        vector_head_normalized = self.emb_scale * F.normalize(vector_head_masked, dim=1)
-        
-        if vector_head_normalized.numel() > 0:
+
+        if vector_head_masked.numel() > 0:
             vector_target = target[mask > 0].contiguous()
-            vector_target_normalized = F.normalize(vector_target, dim=1)
-            cosine_similarity = F.cosine_similarity(vector_head_normalized, vector_target_normalized, dim=1)
+            # F.cosine_similarity normalises both inputs internally, so no
+            # pre-normalisation is required; it is done implicitly.
+            cosine_similarity = F.cosine_similarity(
+                vector_head_masked, vector_target, dim=1)
             vector_loss = 1 - cosine_similarity.mean()
         else:
             vector_loss = torch.tensor(0.0, device=output.device, requires_grad=True)

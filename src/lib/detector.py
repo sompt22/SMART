@@ -221,7 +221,7 @@ class Detector(object):
     if input_meta is None:
       input_meta = {}
     resized_image, c, s, inp_width, inp_height, height, width = \
-      self._transform_scale(image)
+      self._transform_scale(image, scale)
     trans_input = get_affine_transform(c, s, 0, [inp_width, inp_height])
     out_height =  inp_height // self.opt.down_ratio
     out_width =  inp_width // self.opt.down_ratio

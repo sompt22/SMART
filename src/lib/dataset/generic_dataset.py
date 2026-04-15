@@ -487,10 +487,13 @@ class GenericDataset(data.Dataset):
     if 'embedding' in self.opt.heads:
       if ann_track_id in track_ids:
         ret['tid_mask'][k] = 1
-        ret['tid'][k] = ann_track_id
+        # MOT annotations use 1-indexed IDs; EmbeddingLoss expects 0-indexed
+        # class labels for CrossEntropyLoss.  Subtract 1 so all IDs land in
+        # [0, nID-1] and none are silently excluded by the valid_id_mask check.
+        ret['tid'][k] = ann_track_id - 1 if ann_track_id > 0 else 0
         gt_det['tid'].append(ret['tid'][k])
       else:
-        gt_det['tid'].append(np.array(-1,dtype=np.int64))
+        gt_det['tid'].append(np.array(-1, dtype=np.int64))
 
       if self.opt.know_dist_weight:
         if 'embedding' in ann and ann_track_id in track_ids:

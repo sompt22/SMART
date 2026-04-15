@@ -50,6 +50,7 @@ class Tracker:
             self.initialize_files()
 
     def step(self, detections, public_det=None):
+        detections = self._sanitize_detections(detections)
         N = len(detections) # Number of Detections
         M = len(self.tracks) # Number of Tracks
         if self.opt.debug == 4: self.oper.write("Frame: " + str(self.frm_count) + "\n")
@@ -79,7 +80,7 @@ class Tracker:
             self.frm_count += 1
             return []
 
-        if self.tracking_task and all('tracking' in det for det in detections):
+        if self.tracking_task and all(det.get('tracking') is not None for det in detections):
             dets = np.array([det['ct'] + det['tracking'] for det in detections], np.float32) # N x 2
         else:
             dets = np.array([det['ct'] for det in detections], np.float32) # N x 2
@@ -118,60 +119,75 @@ class Tracker:
         if embeddings_valid:
             tracks_emb = np.asarray([track.embedding for track in self.tracks], np.float32)  # M x embedding_dim
             dets_emb = np.asarray([det['embedding'] for det in detections], np.float32)      # N x embedding_dim
-            # embedding_distance(tracks, dets) → shape (M, N): rows=tracks, cols=dets.
-            # Transpose to (N, M) so rows=dets, cols=tracks, matching invalid's layout.
-            cos_sim = matching.embedding_distance(tracks_emb, dets_emb).T  # (N, M)
-            gated_cos_sim = cos_sim + invalid * 1.0
-            matched_indices, unmatched_dets, unmatched_tracks = matching.linear_assignment(gated_cos_sim, thresh=self.opt.embedding_thresh)
-            if self.opt.debug == 4:
-                self.oper.write("Cosine Similarity Matrix: \n")
-                self.oper.write(str(cos_sim) + "\n")
-                self.oper.write("Gated Cosine Similarity Matrix: \n")
-                self.oper.write(str(gated_cos_sim) + "\n")
-
-            # === Stage 2: IoU-based fallback for unmatched from Stage 1 ===
-            if len(unmatched_dets) > 0 and len(unmatched_tracks) > 0:
-                u_detections_bboxes = np.array([detections[i]['bbox'] for i in unmatched_dets], dtype=np.float64)
-                u_tracks_bboxes = np.array([self.tracks[i].bbox for i in unmatched_tracks], dtype=np.float64)
-                iou_matrix = matching.ious(
-                    np.ascontiguousarray(u_detections_bboxes, dtype=np.float64),
-                    np.ascontiguousarray(u_tracks_bboxes, dtype=np.float64)
-                )
-                iou_cost = 1.0 - iou_matrix
-                # Apply category gating on the sub-matrix
-                for di, d_idx in enumerate(unmatched_dets):
-                    for ti, t_idx in enumerate(unmatched_tracks):
-                        if item_cat[d_idx] != track_cat[t_idx]:
-                            iou_cost[di, ti] = 1.0
-
-                iou_matched, iou_unmatched_dets, iou_unmatched_tracks = matching.linear_assignment(iou_cost, thresh=self.opt.iou_thresh)
-
+            if tracks_emb.ndim == 2 and dets_emb.ndim == 2 and \
+               tracks_emb.shape[1] == dets_emb.shape[1] and tracks_emb.shape[1] > 0:
+                # embedding_distance(tracks, dets) → shape (M, N): rows=tracks, cols=dets.
+                # Transpose to (N, M) so rows=dets, cols=tracks, matching invalid's layout.
+                cos_sim = matching.embedding_distance(tracks_emb, dets_emb).T  # (N, M)
+                gated_cos_sim = cos_sim + invalid.astype(np.float64)
+                matched_indices, unmatched_dets, unmatched_tracks = matching.linear_assignment(
+                    gated_cos_sim, thresh=self.opt.embedding_thresh)
                 if self.opt.debug == 4:
-                    self.oper.write("Stage 2 IoU Cost Matrix: \n")
-                    self.oper.write(str(iou_cost) + "\n")
-                    self.oper.write("Stage 2 IoU Matched: \n")
-                    self.oper.write(str(iou_matched) + "\n")
+                    self.oper.write("Cosine Similarity Matrix: \n")
+                    self.oper.write(str(cos_sim) + "\n")
+                    self.oper.write("Gated Cosine Similarity Matrix: \n")
+                    self.oper.write(str(gated_cos_sim) + "\n")
 
-                # Remap indices back to original
-                iou_matched_remapped = np.array([[unmatched_dets[m[0]], unmatched_tracks[m[1]]] for m in iou_matched], dtype=int).reshape(-1, 2)
-                if len(matched_indices) > 0 and len(iou_matched_remapped) > 0:
-                    matched_indices = np.concatenate([matched_indices, iou_matched_remapped], axis=0)
-                elif len(iou_matched_remapped) > 0:
-                    matched_indices = iou_matched_remapped
+                # === Stage 2: IoU-based fallback for unmatched from Stage 1 ===
+                if len(unmatched_dets) > 0 and len(unmatched_tracks) > 0:
+                    u_detections_bboxes = np.array([detections[i]['bbox'] for i in unmatched_dets], dtype=np.float64)
+                    u_tracks_bboxes = np.array([self.tracks[i].bbox for i in unmatched_tracks], dtype=np.float64)
+                    iou_matrix = matching.ious(
+                        np.ascontiguousarray(u_detections_bboxes, dtype=np.float64),
+                        np.ascontiguousarray(u_tracks_bboxes, dtype=np.float64)
+                    )
+                    iou_cost = 1.0 - iou_matrix
+                    # Apply category gating on the sub-matrix
+                    for di, d_idx in enumerate(unmatched_dets):
+                        for ti, t_idx in enumerate(unmatched_tracks):
+                            if item_cat[d_idx] != track_cat[t_idx]:
+                                iou_cost[di, ti] = 1.0
 
-                unmatched_dets = np.array([unmatched_dets[i] for i in iou_unmatched_dets])
-                unmatched_tracks = np.array([unmatched_tracks[i] for i in iou_unmatched_tracks])
+                    iou_matched, iou_unmatched_dets, iou_unmatched_tracks = matching.linear_assignment(
+                        iou_cost, thresh=self.opt.iou_thresh)
 
-        else:
+                    if self.opt.debug == 4:
+                        self.oper.write("Stage 2 IoU Cost Matrix: \n")
+                        self.oper.write(str(iou_cost) + "\n")
+                        self.oper.write("Stage 2 IoU Matched: \n")
+                        self.oper.write(str(iou_matched) + "\n")
+
+                    # Remap indices back to original
+                    iou_matched_remapped = np.array(
+                        [[unmatched_dets[m[0]], unmatched_tracks[m[1]]] for m in iou_matched],
+                        dtype=int).reshape(-1, 2)
+                    if len(matched_indices) > 0 and len(iou_matched_remapped) > 0:
+                        matched_indices = np.concatenate([matched_indices, iou_matched_remapped], axis=0)
+                    elif len(iou_matched_remapped) > 0:
+                        matched_indices = iou_matched_remapped
+
+                    unmatched_dets = np.array([unmatched_dets[i] for i in iou_unmatched_dets])
+                    unmatched_tracks = np.array([unmatched_tracks[i] for i in iou_unmatched_tracks])
+            else:
+                embeddings_valid = False
+
+        if not embeddings_valid:
             if self.opt.hungarian:
-                item_score = np.array([item['score'] for item in detections], np.float32) # N
                 lse_dist[lse_dist > 1e18] = 1e18
                 row_ind, col_ind = linear_assignment_sk(lse_dist)
+                # scipy has no cost-limit parameter; filter gated pairs manually.
+                # Gated entries were set to 1e18, so any assigned pair at that
+                # cost is an invalid (category-mismatched / out-of-range) match.
+                if len(row_ind) > 0:
+                    valid = lse_dist[row_ind, col_ind] < 1e18
+                    row_ind, col_ind = row_ind[valid], col_ind[valid]
                 matched_indices = np.column_stack((row_ind, col_ind)) if len(row_ind) > 0 else np.empty((0, 2), dtype=int)
             else:
                 matched_indices = matching.greedy_assignment(copy.deepcopy(lse_dist))
-            unmatched_dets = [d for d in range(dets.shape[0]) if not (d in matched_indices[:, 0])]
-            unmatched_tracks = [d for d in range(tracks.shape[0]) if not (d in matched_indices[:, 1])]
+            matched_set_dets = set(matched_indices[:, 0].tolist()) if len(matched_indices) > 0 else set()
+            matched_set_tracks = set(matched_indices[:, 1].tolist()) if len(matched_indices) > 0 else set()
+            unmatched_dets = [d for d in range(dets.shape[0]) if d not in matched_set_dets]
+            unmatched_tracks = [d for d in range(tracks.shape[0]) if d not in matched_set_tracks]
         if self.opt.debug == 4:
             self.oper.write("Matched Indices: \n")
             self.oper.write(str(matched_indices) + "\n")
@@ -261,3 +277,30 @@ class Tracker:
                                  initial_embedding=init_embedding,\
                                  max_age=self.max_age,\
                                  smoothing_window=self.smoothing_window))
+
+    def _sanitize_detections(self, detections):
+        sanitized = []
+        for det in detections:
+            if 'bbox' not in det or 'ct' not in det or 'score' not in det or 'class' not in det:
+                continue
+            det_copy = dict(det)
+            det_copy['bbox'] = np.asarray(det_copy['bbox'], dtype=np.float32).reshape(-1)[:4].tolist()
+            det_copy['ct'] = np.asarray(det_copy['ct'], dtype=np.float32).reshape(-1)[:2].tolist()
+            if self.tracking_task:
+                tracking = det_copy.get('tracking')
+                if tracking is not None:
+                    tracking = np.asarray(tracking, dtype=np.float32).reshape(-1)
+                    det_copy['tracking'] = tracking[:2] if tracking.size >= 2 else None
+            if self.embedding_task:
+                embedding = det_copy.get('embedding')
+                if embedding is not None:
+                    embedding = np.asarray(embedding, dtype=np.float32).reshape(-1)
+                    if embedding.size == 0:
+                        det_copy['embedding'] = None
+                    else:
+                        norm = np.linalg.norm(embedding)
+                        if norm > 1e-6:
+                            embedding = embedding / norm
+                        det_copy['embedding'] = embedding
+            sanitized.append(det_copy)
+        return sanitized

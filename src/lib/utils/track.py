@@ -7,15 +7,15 @@ class Track(object):
 
     def __init__(self, track_id, initial_bbox, initial_score, initial_class, initial_ct, initial_tracking, initial_embedding=None, smoothing_window=10, max_age=30):
         self.track_id = track_id
-        self.bbox = initial_bbox  # [x1, y1, x2, y2]
+        self.bbox = np.asarray(initial_bbox, dtype=np.float32).tolist()  # [x1, y1, x2, y2]
         self.score = initial_score
         self.class_id = initial_class
-        self.center = initial_ct
+        self.center = np.asarray(initial_ct, dtype=np.float32).tolist()
         self.center_disp_history = np.array((0, 0))
-        self.tracking = initial_tracking if initial_tracking is not None else None
-        self.tracking_history = [] if initial_tracking is None else [initial_tracking]
-        self.embedding = initial_embedding if initial_embedding is not None else None
-        self.embeddings_history = [] if initial_embedding is None else [initial_embedding]
+        self.tracking = self._normalize_tracking(initial_tracking)
+        self.tracking_history = [] if self.tracking is None else [self.tracking.copy()]
+        self.embedding = self._normalize_embedding(initial_embedding)
+        self.embeddings_history = [] if self.embedding is None else [self.embedding.copy()]
         self.age = 0
         self.active = 1
         self.is_on_probation = True
@@ -25,6 +25,27 @@ class Track(object):
 
         # Kalman filter state
         self.mean, self.covariance = self.shared_kalman.initiate(self.bbox_to_xyah(self.bbox))
+
+    @staticmethod
+    def _normalize_tracking(tracking):
+        if tracking is None:
+            return None
+        tracking = np.asarray(tracking, dtype=np.float32).reshape(-1)
+        if tracking.size < 2:
+            return None
+        return tracking[:2].copy()
+
+    @staticmethod
+    def _normalize_embedding(embedding):
+        if embedding is None:
+            return None
+        embedding = np.asarray(embedding, dtype=np.float32).reshape(-1)
+        if embedding.size == 0:
+            return None
+        norm = np.linalg.norm(embedding)
+        if norm > 1e-6:
+            embedding = embedding / norm
+        return embedding.copy()
 
     @staticmethod
     def bbox_to_xyah(bbox):
@@ -61,21 +82,27 @@ class Track(object):
     def update(self, new_bbox=None, new_score=None, new_class=None, new_ct=None, new_tracking=None, new_embedding=None, decrement_probation=True):
         """Update the track with new data."""
         if new_bbox is not None:
-            self.bbox = new_bbox
+            self.bbox = np.asarray(new_bbox, dtype=np.float32).tolist()
             # Kalman filter correction step
-            measurement = self.bbox_to_xyah(new_bbox)
+            measurement = self.bbox_to_xyah(self.bbox)
             self.mean, self.covariance = self.shared_kalman.update(self.mean, self.covariance, measurement)
         if new_score is not None:
             self.score = new_score
         if new_class is not None:
             self.class_id = new_class
         if new_ct is not None:
+            new_ct = np.asarray(new_ct, dtype=np.float32).reshape(-1)[:2]
             self.center_disp_history = self.center_distance(new_ct)
-            self.center = new_ct
+            self.center = new_ct.tolist()
         if new_tracking is not None:
-            self.tracking = new_tracking
+            normalized_tracking = self._normalize_tracking(new_tracking)
+            if normalized_tracking is not None:
+                self.tracking = normalized_tracking
+                self.tracking_history.append(normalized_tracking.copy())
         if new_embedding is not None:
-            self.embedding = self.smooth_fcn(self.embeddings_history, new_embedding)
+            normalized_embedding = self._normalize_embedding(new_embedding)
+            if normalized_embedding is not None:
+                self.embedding = self.smooth_fcn(self.embeddings_history, normalized_embedding)
         self.age = 0
 
         # Decrease probation frames on update
@@ -102,6 +129,9 @@ class Track(object):
             return new_value
         # EMA: stable historical representation with gradual new-observation updates
         smoothed = alpha * history[-1] + (1 - alpha) * new_value
+        norm = np.linalg.norm(smoothed)
+        if norm > 1e-6:
+            smoothed = smoothed / norm
         history.append(new_value.copy())  # Store original, not smoothed
         if len(history) > self.smoothing_window:
             history.pop(0)

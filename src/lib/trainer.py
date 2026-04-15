@@ -156,11 +156,12 @@ class Trainer(object):
         chunk_sizes=chunk_sizes).to(device)
     else:
       self.model_with_loss = self.model_with_loss.to(device)
-    
-    for state in self.optimizer.state.values():
-      for k, v in state.items():
-        if isinstance(v, torch.Tensor):
-          state[k] = v.to(device=device, non_blocking=True)
+
+    if self.optimizer is not None:
+      for state in self.optimizer.state.values():
+        for k, v in state.items():
+          if isinstance(v, torch.Tensor):
+            state[k] = v.to(device=device, non_blocking=True)
 
   def run_epoch(self, phase, epoch, data_loader):
     model_with_loss = self.model_with_loss
@@ -293,10 +294,10 @@ class Trainer(object):
             debugger.add_arrow(
               dets['cts'][i][k] * opt.down_ratio, 
               dets['tracking'][i][k] * opt.down_ratio, img_id='pre_img_pred')
-          if 'embedding' in opt.heads:
+          if 'embedding' in opt.heads and 'embedding' in dets:
             debugger.add_embedding_norm(
               dets['cts'][i][k] * opt.down_ratio,
-              output['embedding'][i][k].detach().cpu().numpy(), img_id='out_pred')  
+              dets['embedding'][i][k], img_id='out_pred')
 
       # Ground truth
       debugger.add_img(img, img_id='out_gt')

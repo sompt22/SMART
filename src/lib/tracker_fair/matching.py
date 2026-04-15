@@ -212,7 +212,7 @@ def calculate_distance_matrix(dets, tracks):
 def embedding_filter(ret, embedding_history, smoothing_window):
     """Smooth embeddings over temporal window using running average.
 
-    Note: This is used by trackerv1. The main tracker uses Track.smooth_fcn (EMA) instead.
+    Note: The main tracker uses Track.smooth_fcn (EMA) instead of this helper.
     """
     for i, emb in enumerate(ret):
         if 'embedding' not in emb:
