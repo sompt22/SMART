@@ -37,12 +37,9 @@ def get_extensions():
             "-D__CUDA_NO_HALF_CONVERSIONS__",
             "-D__CUDA_NO_HALF2_OPERATORS__",
         ]
-    else:
-        raise RuntimeError(
-            "CUDA is not available and FORCE_CUDA is not set. "
-            "DCNv2 requires CUDA. Set FORCE_CUDA=1 when building "
-            "inside Docker (no GPU at build time)."
-        )
+    # No CUDA: fall through with CppExtension + CPU sources only.
+    # dcn_v2.h dispatches to CPU kernels when input is not on CUDA,
+    # so a CPU-only build is fully functional for CPU/MPS inference.
 
     sources = [os.path.join(extensions_dir, s) for s in sources]
     include_dirs = [extensions_dir]

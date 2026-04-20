@@ -25,7 +25,6 @@ easydict
 scipy
 pyyaml
 yacs
-PyYAML
 cython-bbox
 motmetrics
 lapx>=0.5.2

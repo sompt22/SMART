@@ -93,26 +93,18 @@ conda install pytorch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 \
     pytorch-cuda=11.6 -c pytorch -c nvidia
 ```
 
-**3. Install build tools**
+**3. Create the environment (includes all dependencies + build tools)**
 
 ```bash
-conda install cython ninja
-conda install cudatoolkit-dev -c conda-forge
-pip install python-dev-tools --user --upgrade
-pip install numpy==1.23.5
+conda env create -f environment.yml
+conda activate smart
 ```
 
-**4. Install Python dependencies**
-
-```bash
-pip install -r requirements.txt
-```
-
-**5. Build DCNv2 (Deformable Convolution)**
+**4. Build DCNv2 (Deformable Convolution)**
 
 ```bash
 cd src/lib/model/networks/DCNv2
-python setup.py build develop
+python setup.py build_ext --inplace
 cd ../../../../..
 ```
 
@@ -631,11 +623,10 @@ Register the new dataset class under `src/lib/dataset/datasets/` and add it to
 ### DCNv2 build fails (`error: command 'gcc' failed`)
 
 ```bash
-# Make sure gcc and CUDA toolkit-dev are installed
+# Make sure gcc and CUDA toolkit-dev are installed (included in environment.yml)
 conda install cudatoolkit-dev -c conda-forge
-pip install python-dev-tools --user --upgrade
 # Then retry:
-cd src/lib/model/networks/DCNv2 && python setup.py build develop
+cd src/lib/model/networks/DCNv2 && python setup.py build_ext --inplace
 ```
 
 ### `ImportError: numpy.core.multiarray failed to import` or numba crash
