@@ -19,8 +19,12 @@ import torch.nn as nn
 try:
   from ..DCNv2.dcn_v2 import DCN
 except ImportError:
-  print('import DCN failed')
-  DCN = None
+  try:
+    from ..DCNv2.dcn_v2_mps import DCN
+    print('[DCN] msraup: using MPS/CPU-compatible DCN (torchvision)')
+  except ImportError:
+    print('[DCN] msraup: WARNING — no DCN implementation found, will fail at runtime')
+    DCN = None
 
 
 BN_MOMENTUM = 0.1

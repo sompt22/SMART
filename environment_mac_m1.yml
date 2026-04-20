@@ -47,3 +47,10 @@ dependencies:
       - openpyxl
       - pyquaternion==0.9.9
       - pyrsistent
+
+      # fvcore transitive dependencies
+      - iopath==0.1.10
+      - portalocker==2.7.0
+      - tabulate==0.9.0
+      - termcolor==2.2.0
+      - packaging==23.0

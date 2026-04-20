@@ -273,10 +273,12 @@ COPY . .
 # Build External NMS (Cython, no CUDA)
 RUN cd src/lib/external && python setup.py build_ext --inplace
 
-# Build DCNv2 CPU-only (FORCE_CUDA=0 skips CUDA sources)
+# Build DCNv2 CPU-only.
+# FORCE_CUDA is not set (defaults to "0"), so setup.py uses CppExtension
+# with only the CPU sources.  dcn_v2.h dispatches to CPU kernels at runtime.
 RUN cd src/lib/model/networks/DCNv2 && \
     rm -rf build/ *.egg-info *.so && \
-    FORCE_CUDA=0 python setup.py build_ext --inplace && \
+    python setup.py build_ext --inplace && \
     echo "=== DCNv2 CPU build OK ==="
 
 # Verify: compiled extension OR MPS shim

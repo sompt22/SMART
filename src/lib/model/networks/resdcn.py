@@ -19,8 +19,12 @@ import torch.nn as nn
 try:
   from .DCNv2.dcn_v2 import DCN
 except ImportError:
-  print('Import DCN failed')
-  DCN = None
+  try:
+    from .DCNv2.dcn_v2_mps import DCN
+    print('[DCN] resdcn: using MPS/CPU-compatible DCN (torchvision)')
+  except ImportError:
+    print('[DCN] resdcn: WARNING — no DCN implementation found, will fail at runtime')
+    DCN = None
 import torch.utils.model_zoo as model_zoo
 from .base_model import BaseModel
 
