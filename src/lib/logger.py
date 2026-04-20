@@ -4,6 +4,7 @@ from __future__ import print_function
 
 # Code referenced from https://gist.github.com/gyglim/1f8dfb1b5c82627ae3efcfbbadb9f514
 import os
+import shutil
 import time
 import sys
 import torch
@@ -46,7 +47,7 @@ class Logger(object):
     else:
       os.makedirs(log_dir, exist_ok=True)
     self.log = open(log_dir + '/log.txt', 'w')
-    os.system('cp {}/opt.txt {}/'.format(opt.save_dir, log_dir))
+    shutil.copy(os.path.join(opt.save_dir, 'opt.txt'), log_dir)
     self.start_line = True
 
   def write(self, txt):

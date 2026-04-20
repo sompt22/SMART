@@ -7,6 +7,8 @@ from pycocotools.cocoeval import COCOeval
 import numpy as np
 import json
 import os
+import sys
+import subprocess
 from collections import defaultdict
 from ..generic_dataset import GenericDataset
 
@@ -88,9 +90,12 @@ class MOT(GenericDataset):
                 else '_val_half' if '17halfval' in self.opt.dataset_version \
                 else '')
     gt_type_str = '_val_half' if self.year in [16, 19] else gt_type_str
-    gt_type_str = '--gt_type {}'.format(gt_type_str) if gt_type_str != '' else \
-      ''
-    os.system('python tools/eval_motchallenge.py ' + \
-              '../data/mot{}/{}/ '.format(self.year, 'train') + \
-              '{}/results_mot{}/ '.format(save_dir, self.dataset_version) + \
-              gt_type_str + ' --eval_official')
+    cmd = [
+      sys.executable, 'tools/eval_motchallenge.py',
+      '../data/mot{}/{}/'.format(self.year, 'train'),
+      '{}/results_mot{}/'.format(save_dir, self.dataset_version),
+      '--eval_official',
+    ]
+    if gt_type_str != '':
+      cmd += ['--gt_type', gt_type_str]
+    subprocess.run(cmd)

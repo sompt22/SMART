@@ -7,6 +7,8 @@ from pycocotools.cocoeval import COCOeval
 import numpy as np
 import json
 import os
+import sys
+import subprocess
 
 from ..generic_dataset import GenericDataset
 
@@ -91,8 +93,10 @@ class CrowdHuman(GenericDataset):
                        '{}/results_crowdhuman.odgt'.format(save_dir))
   def run_eval(self, results, save_dir):
     self.save_results(results, save_dir)
-    ret = os.system('python tools/crowdhuman_eval/demo.py ' + \
-                    '../data/crowdhuman/annotation_val.odgt ' + \
-                    '{}/results_crowdhuman.odgt'.format(save_dir))
+    ret = subprocess.run([
+      sys.executable, 'tools/crowdhuman_eval/demo.py',
+      '../data/crowdhuman/annotation_val.odgt',
+      '{}/results_crowdhuman.odgt'.format(save_dir),
+    ]).returncode
     if ret != 0:
       print('Crowdhuman evaluation not setup!')

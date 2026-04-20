@@ -88,7 +88,7 @@ def generic_post_process(
         item['alpha'] = get_alpha(dets['rot'][i][j:j+1])[0]
       
       if 'rot' in dets and 'dep' in dets and 'dim' in dets \
-        and len(dets['dep'][i]) > j:
+        and 'bboxes' in dets and len(dets['dep'][i]) > j:
         if 'amodel_offset' in dets and len(dets['amodel_offset'][i]) > j:
           ct_output = dets['bboxes'][i][j].reshape(2, 2).mean(axis=0)
           amodel_ct_output = ct_output + dets['amodel_offset'][i][j]
