@@ -132,7 +132,7 @@ class Track(object):
         norm = np.linalg.norm(smoothed)
         if norm > 1e-6:
             smoothed = smoothed / norm
-        history.append(new_value.copy())  # Store original, not smoothed
+        history.append(smoothed.copy())
         if len(history) > self.smoothing_window:
             history.pop(0)
         return smoothed
